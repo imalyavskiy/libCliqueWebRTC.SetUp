@@ -15,43 +15,71 @@ import shutil
 import env_extractor
 
 config = { 
-    "boost" : 
-    { "active"       : False
-    , "clone"        : False
-    , "build"        : False
-    , "url"          : "https://github.com/boostorg/boost"
-    , "target_branch": "branch_boost-1.64.0"
-    , "source_tag"   : "boost-1.64.0"
-    , "build_targets": 
-        [
-            { "args":"--with-system --with-date_time --with-random --with-regex link=static runtime-link=static threading=multi address-model=32"
-            , "src": "stage/lib"
-            , "dst": "stage/lib_Win32"}
-        ,   { "args":"--with-system --with-date_time --with-random --with-regex link=static runtime-link=shared threading=multi address-model=32"
-            , "src": "stage/lib"
-            , "dst": "stage/lib_Win32"}
-        ,   { "args":"--with-system --with-date_time --with-random --with-regex link=static runtime-link=static threading=multi address-model=64"
-            , "src": "stage/lib"
-            , "dst": "stage/lib_Win64"}
-        ,   { "args":"--with-system --with-date_time --with-random --with-regex link=static runtime-link=shared threading=multi address-model=64"
-            , "src": "stage/lib"
-            , "dst": "stage/lib_Win64"}
+    "boost" : # the feature
+    { "active"       : False #does this feature enabled or not
+    , "clone"        : False #does the "git clone" step enabled or not
+    , "build"        : False #does the "build step" enabled or not
+    , "url"          : "https://github.com/boostorg/boost" # git clone source url
+    , "target_branch": "branch_boost-1.64.0"               # the branch to switch to(should exist) if brunch not exist but tag is provided then branch wiil be created from the tag below
+    , "source_tag"   : "boost-1.64.0"                      # the tag for the branch to create from
+    , "build_targets": # a set of build configurations
+        [#targets
+            { "args":"--with-system --with-date_time --with-random --with-regex link=static runtime-link=static threading=multi address-model=32" # how to build
+            , "src": "stage/lib"                                                                                                                  # libraries are here
+            , "dst": "stage/lib_Win32"}                                                                                                           # move them here
+        ,   { "args":"--with-system --with-date_time --with-random --with-regex link=static runtime-link=shared threading=multi address-model=32" #
+            , "src": "stage/lib"                                                                                                                  #
+            , "dst": "stage/lib_Win32"}                                                                                                           #
+        ,   { "args":"--with-system --with-date_time --with-random --with-regex link=static runtime-link=static threading=multi address-model=64" #
+            , "src": "stage/lib"                                                                                                                  #
+            , "dst": "stage/lib_Win64"}                                                                                                           #
+        ,   { "args":"--with-system --with-date_time --with-random --with-regex link=static runtime-link=shared threading=multi address-model=64" #
+            , "src": "stage/lib"                                                                                                                  #
+            , "dst": "stage/lib_Win64"}                                                                                                           #
         ]
     },
     
-    "openssl.org" :
-    { "active"       : True
-    , "clone"        : False
-    , "build"        : True
-    , "url"          : "git://git.openssl.org/openssl.git"
-    , "target_branch": "branch_OpenSSL_1_0_2l"
-    , "source_tag"   : "OpenSSL_1_0_2l"
-    , "build_targets": 
-        [
-            { "env"     : "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/vcvarsall.bat"
-            , "env_arg" : "x86"}
-        ,   { "env"     : "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/vcvarsall.bat"
-            , "env_arg" : "amd64"}
+    "openssl.org" : # the feature
+    { "active"       : False #does this feature enabled or not
+    , "clone"        : False #does the "git clone" step enabled or not
+    , "build"        : False #does the "build step" enabled or not
+    , "url"          : "git://git.openssl.org/openssl.git"  # git clone source url
+    , "target_branch": "branch_OpenSSL_1_0_2l"              # the branch to switch to(should exist) if brunch not exist but tag is provided then branch wiil be created from the tag below
+    , "source_tag"   : "OpenSSL_1_0_2l"                     # the tag for the branch to create from
+    , "build_targets": # a set of targets
+        [#targets
+            [ #steps reqired to build certain turget
+                { "env"     : "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/vcvarsall.bat" 
+                , "env_arg" : ["x86"]}, # run batch in "env" with key in "env_arg" in order to get proper evirinment variables
+                { "command" : "git"
+                , "args"    : "clean -fx -d"}, #clean up local git repo
+                { "command" : "perl" 
+                , "args"    : "Configure VC-WIN32 no-asm --prefix=./../openssl_libs/x86"}, # configure the feature in order to build the target
+                { "command" : "cmd.exe" 
+                , "args"    : "/c"
+                , "rel_args": ["ms/do_ms.bat"]}, # another one configuration step
+                { "command" : "cmd.exe"
+                , "args"    : "/c nmake -f ms/ntdll.mak"}, # building step
+                { "command" : "cmd.exe"
+                , "args"    : "/c nmake -f ms/ntdll.mak install"}, # installing step the location of installation has been set previousely see --prefix at few lines above
+            ],
+            [#steps
+                { "env"     : "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/vcvarsall.bat"
+                , "env_arg" : ["amd64"]}
+            ,   { "upd_env" : "Path" # it is necessary to tell where is ml64.exe is located. The Path environment variable will be prended with the path in "prepend"(if "append" then the value pf append
+                , "prepend" : "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.10.25017/bin/HostX64/x64"} #will be appended to Path
+            ,   { "command" : "git"
+                , "args"    : "clean -fx -d"}
+            ,   { "command" : "perl"
+                , "args"    : "Configure VC-WIN64A --prefix=./../openssl_libs/x64"}
+            ,   { "command" : "cmd.exe"
+                , "args"    : "/c"
+                , "rel_args": ["ms/do_win64a.bat"]} # this step requires ml64.exe
+            ,   { "command" : "cmd.exe"
+                , "args"    : "/c nmake -f ms/ntdll.mak"}
+            ,   { "command" : "cmd.exe"
+                , "args"    : "/c nmake -f ms/ntdll.mak install"}
+            ]
         ]
     },
     
@@ -65,7 +93,7 @@ config = {
     , "build_targets": []},
 
     "depot_tools" :
-    { "active"       : True
+    { "active"       : False
     , "clone"        : True
     , "build"        : False
     , "url"          : "https://chromium.googlesource.com/chromium/tools/depot_tools.git"
@@ -156,12 +184,30 @@ def build_boost(target_dir):
 
 def build_openssl(target_dir):
     openssl_config = config["openssl.org"]
-    env = {}
+    openssl_root_dir = target_dir + "/openssl.org"
+    
     for build_target in openssl_config["build_targets"]:
-        env = env_extractor.get_environment_from_batch_command(build_target["env"], [build_target["env_arg"]])
-        #TODO implement openssl build commands
-        pass
-    pass
+        _env = {}
+        for step in build_target:
+            if "env" in step and "env_arg" in step:
+                _env = env_extractor.get_environment_from_batch_command(step["env"], step["env_arg"])
+            elif "upd_env" in step:
+                if step["upd_env"] in _env:
+                    if "prepend" in step:
+                        _env[step["upd_env"]] = "{0};{1}".format(step["prepend"], _env[step["upd_env"]]) 
+                    if "append" in step:
+                        if _env[step["upd_env"]].endswith(";"):
+                            _env[step["upd_env"]] += step["append"]
+                        _env[step["upd_env"]] += step["append"] + ";"
+            elif "command" in step and "args" in step:
+                args = step["args"]
+                if "rel_args" in step:
+                    rel_args = step["rel_args"]
+                    for arg in rel_args:
+                        args += " " + "{0}/{1}".format(openssl_root_dir, arg) 
+                str_result = git_tools.run(log, step["command"], args, cwd=openssl_root_dir, env=_env)
+            else:
+                log.error("Uknown step")
 
 def build_socketio(target_dir):
     pass

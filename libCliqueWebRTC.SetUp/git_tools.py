@@ -13,6 +13,11 @@ def run(log, target, args=None, **kwargs):
     cwd = kwargs.get("cwd")
     if cwd is not None:
         cwd_str = cwd
+    
+    if "env" in kwargs:
+        _env = kwargs["env"]
+    else:
+        _env = None
 
     log.info("Call \"{0}\"... ".format(cmd_str)) #TODO: stay on the same line as it was with print
     output = subprocess.Popen(cmd_str,
@@ -20,7 +25,8 @@ def run(log, target, args=None, **kwargs):
                                 stdin=pipe,
                                 stdout=pipe,
                                 stderr=subprocess.STDOUT,
-                                cwd=cwd_str).stdout.read()
+                                cwd=cwd_str,
+                                env=_env).stdout.read()
     log.info("Done.")
     
     if 0 == len(output):
