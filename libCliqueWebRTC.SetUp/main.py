@@ -6,18 +6,19 @@
 # clone https://github.com/socketio/socket.io-client-cpp
 # update submodules if any
 
-install_dir="D:/test_setup"
+install_dir="D:/TEMP/test_setup"
 
 import git_tools
 import log_tools
 import os
 import shutil
 import env_extractor
+import command
 
 #TODO redesign settings and code in order to comply to command+arguments style
 # for now cloning is left aside
 
-config = { 
+config_1_0 = { 
     "boost" : # the feature
     { "active"       : False #does this feature enabled or not
     , "clone"        : False #does the "git clone" step enabled or not
@@ -218,6 +219,144 @@ config = {
     , "build_targets": []},
 }
 
+dependencies =\
+[
+    { "name"          : "boost",
+      "stages"        : [ 
+            { "name"  : "clone",
+              "active": True,
+              "steps" :
+                [
+                    { "command" : command.git,
+                      "args"    : [ "clone", "https://github.com/boostorg/boost", "./"]},
+                    { "command" : command.git,
+                      "args"    : [ "checkout", "-b", "branch_boost-1.64.0", "boost-1.64.0" ]},
+                    { "command" : command.git,
+                      "args"    : ["submodule", "update", "--init", "--"]},
+                ]
+            },
+            { "name"  : "build",
+              "active": True,
+              "steps" : 
+                [
+                    { "command" : command.git,
+                      "args"    : [ "clean", "-fx", "-d"]},
+                    { "command" : command.bootstrap,
+                      "args"    : []},
+                    { "command" : command.b2,
+                      "args"    : [ "headers" ]},
+                    { "command" : command.b2,
+                      "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", 
+                                   "link=static", "runtime-link=static", "threading=multi", "address-model=32"]},
+                    { "command" : command.copy,
+                      "args"    : ["./stage/lib", "./stage/lib_Win32"]},
+                    { "command" : command.b2,
+                      "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", 
+                                   "link=static", "runtime-link=static", "threading=multi", "address-model=64"]},
+                    { "command" : command.copy,
+                      "args"    : ["./stage/lib", "./stage/lib_Win64"]},
+                ]
+            },
+            { "name"  : "clean",
+              "active": True,
+              "steps" :
+                [
+                    { "command" : command.git,
+                      "args"    : [ "clean", "-fx", "-d"]}
+                ]
+            },
+        ]
+    },
+    { "name"          : "openssl",
+      "stages"        : [
+            { "name"  : "clone",
+              "active": False,
+              "steps" :
+                [
+                ]
+            },
+            { "name"  : "build",
+              "active": False,
+              "steps" :
+                [
+                ]
+            },
+            { "name"  : "clean",
+              "active": False,
+              "steps" :
+                [
+                ]
+            },
+        ]
+    },
+    { "name"          : "socket.io",
+      "stages"        : [
+            { "name"  : "clone",
+              "active": False,
+              "steps" :
+                [
+                ]
+            },
+            { "name"  : "build",
+              "active": False,
+              "steps" :
+                [
+                ]
+            },
+            { "name"  : "clean",
+              "active": False,
+              "steps" :
+                [
+                ]
+            },
+        ]
+    },
+    { "name"          : "depot_tools",
+      "stages"        : [
+            { "name"  : "clone",
+              "active": False,
+              "steps" :
+                [
+                ]
+            },
+            { "name"  : "build",
+              "active": False,
+              "steps" :
+                [
+                ]
+            },
+            { "name"  : "clean",
+              "active": False,
+              "steps" :
+                [
+                ]
+            },
+        ]
+    },
+    { "name"          : "webrtc",
+      "stages"        : [
+            { "name"  : "clone",
+              "active": False,
+              "steps" :
+                [
+                ]
+            },
+            { "name"  : "build",
+              "active": False,
+              "steps" :
+                [
+                ]
+            },
+            { "name"  : "clean",
+              "active": False,
+              "steps" :
+                [
+                ]
+            },
+        ]
+    }
+]
+
 log = log_tools.Logger()
 git = git_tools.Client(log)
 
@@ -303,8 +442,8 @@ def clone_one(target_dir, resource_name, source_url, target_branch=None, source_
         git.run("submodule update --init --", cwd=location)
 
 def clone_all(target_dir):
-    for target in config:
-        target_config = config[target]
+    for target in config_1_0:
+        target_config = config_1_0[target]
         if target_config["active"] is True:
             if target_config["clone"] is True:
                 log.info("Cloning \"{0}\"...".format(target))
@@ -331,7 +470,7 @@ def build_boost(target_dir):
         if os.path.isdir(temp_lib_dir):
             shutil.rmtree(temp_lib_dir)
 
-    boost_config = config["boost"]
+    boost_config = config_1_0["boost"]
     if boost_config is None:
         return
     
@@ -389,7 +528,7 @@ def build_boost(target_dir):
     return
 
 def build_openssl(target_dir):
-    openssl_config = config["openssl.org"]
+    openssl_config = config_1_0["openssl.org"]
     openssl_root_dir = target_dir + "/openssl.org"
     
     for build_target in openssl_config["build_targets"]:
@@ -416,7 +555,7 @@ def build_openssl(target_dir):
                 log.error("Uknown step")
 
 def build_socketio(target_dir):
-    socketio_config = config["socket.io-client-cpp"]
+    socketio_config = config_1_0["socket.io-client-cpp"]
     socketio_root_dir = target_dir + "/socket.io-client-cpp"
     _env = os.environ.copy()
     for build_target in socketio_config["build_targets"]:
@@ -456,8 +595,8 @@ def build_libCliqueWebRTC(target_dir):
     pass
 
 def build_all(target_dir):
-    for target in config:
-        target_config = config[target]
+    for target in config_1_0:
+        target_config = config_1_0[target]
         if target_config["active"] is True:
             if target_config["build"] is True:
                 if target == "boost":
@@ -490,7 +629,7 @@ def set_env_variables():
     #TODO : set nesessary environment variables to the windows registry
     pass
 
-def main():
+def main_1_0():
     if not check_binaries():
         return False
 
@@ -502,8 +641,36 @@ def main():
 
     return True
 
+def main_2_0():
+    for dependency in dependencies:
+        if sorted(dependency.keys()) != sorted(["name", "stages"]):
+            log.error("Invalid dependency format")
+            return False
+        log.info("Processing dependency - \"{0}\"...".format(dependency["name"]))
+        for stage in dependency["stages"]:
+            if sorted(stage.keys()) != sorted(["name", "active", "steps"]):
+                log.error("Invalid stage format")
+                return False
+            log.info("Processing stage - \"{0}\"...".format(stage["name"]))
+            for index in range(0, len(stage["steps"])):
+                log.info("step[{0}/{1}]".format(index + 1, len(stage["steps"])))
+                if sorted(stage["steps"][index].keys()) != sorted(["command", "args"]):
+                    log.error("Invalid command format")
+                    return False
+                if not os.path.isdir(install_dir+"/"+dependency["name"]):
+                    os.makedirs(install_dir+"/"+dependency["name"])
+                stage["steps"][index]["command"](
+                    log,
+                    install_dir+"/"+dependency["name"],
+                    stage["steps"][index]["args"],
+                    )
+                pass
+        pass
+    return True
+
 if __name__ == "__main__":
-    if not main():
+#    if not main_1_0():
+    if not main_2_0():
         log.error()
         exit()
     log.success()
