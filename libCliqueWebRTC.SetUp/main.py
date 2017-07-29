@@ -14,6 +14,9 @@ import os
 import shutil
 import env_extractor
 
+#TODO redesign settings and code in order to comply to command+arguments style
+# for now cloning is left aside
+
 config = { 
     "boost" : # the feature
     { "active"       : False #does this feature enabled or not
@@ -440,6 +443,18 @@ def build_socketio(target_dir):
         pass
     pass
 
+def build_depot_tools(target_dir):
+    #TODO implement depot tools building
+    pass
+
+def build_webrtc(target_dir):
+    #TODO implement webrtc building
+    pass
+
+def build_libCliqueWebRTC(target_dir):
+    #TODO implement libCliqueWebRTC building
+    pass
+
 def build_all(target_dir):
     for target in config:
         target_config = config[target]
@@ -451,6 +466,12 @@ def build_all(target_dir):
                     build_openssl(target_dir)
                 elif target == "socket.io-client-cpp":
                     build_socketio(target_dir)
+                elif target == "depot_tools":
+                    build_depot_tools(target_dir)
+                elif target == "webrtc":
+                    build_webrtc(target_dir)
+                elif target == "libCliqueWebRTC":
+                    build_libCliqueWebRTC(target_dir)
             else:
                 log.info("\"{0}\" skipped - build disabled...".format(target))
         else:
@@ -465,6 +486,10 @@ def check_binaries():
 
     return True
 
+def set_env_variables():
+    #TODO : set nesessary environment variables to the windows registry
+    pass
+
 def main():
     if not check_binaries():
         return False
@@ -472,6 +497,8 @@ def main():
     clone_all(install_dir)
     
     build_all(install_dir)
+
+    set_env_variables()
 
     return True
 
