@@ -7,6 +7,7 @@
 # update submodules if any
 
 install_dir="D:/TEMP/test_setup"
+vcvarsall_dir=""
 
 import git_tools
 import log_tools
@@ -228,11 +229,14 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.git,
-                      "args"    : [ "clone", "https://github.com/boostorg/boost", "./"]},
+                      "args"    : [ "clone", "https://github.com/boostorg/boost", "./"],
+                      "result"  : str()},
                     { "command" : command.git,
-                      "args"    : [ "checkout", "-b", "branch_boost-1.64.0", "boost-1.64.0" ]},
+                      "args"    : [ "checkout", "-b", "branch_boost-1.64.0", "boost-1.64.0" ],
+                      "result"  : str()},
                     { "command" : command.git,
-                      "args"    : ["submodule", "update", "--init", "--"]},
+                      "args"    : ["submodule", "update", "--init", "--"],
+                      "result"  : str()},
                 ]
             },
             { "name"  : "build",
@@ -240,21 +244,31 @@ dependencies =\
               "steps" : 
                 [
                     { "command" : command.git,
-                      "args"    : [ "clean", "-fx", "-d"]},
+                      "args"    : [ "clean", "-fx", "-d"],
+                      "result"  : str()},
+                    { "command" : command.read_env_vars,
+                      "args"    : [ "--find", "--source=vcvarsall.bat", "--run-with=x86"],
+                      "result"  : {}},
                     { "command" : command.bootstrap,
-                      "args"    : []},
+                      "args"    : [],
+                      "result"  : str()},
                     { "command" : command.b2,
-                      "args"    : [ "headers" ]},
-                    { "command" : command.b2,
-                      "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", 
-                                   "link=static", "runtime-link=static", "threading=multi", "address-model=32"]},
-                    { "command" : command.copy,
-                      "args"    : ["./stage/lib", "./stage/lib_Win32"]},
+                      "args"    : [ "headers" ],
+                      "result"  : str()},
                     { "command" : command.b2,
                       "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", 
-                                   "link=static", "runtime-link=static", "threading=multi", "address-model=64"]},
+                                   "link=static", "runtime-link=static", "threading=multi", "address-model=32"],
+                      "result"  : str()},
                     { "command" : command.copy,
-                      "args"    : ["./stage/lib", "./stage/lib_Win64"]},
+                      "args"    : ["./stage/lib", "./stage/lib_Win32"],
+                      "result"  : str()},
+                    { "command" : command.b2,
+                      "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", 
+                                   "link=static", "runtime-link=static", "threading=multi", "address-model=64"],
+                      "result"  : str()},
+                    { "command" : command.copy,
+                      "args"    : ["./stage/lib", "./stage/lib_Win64"],
+                      "result"  : str()},
                 ]
             },
             { "name"  : "clean",
@@ -262,7 +276,8 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.git,
-                      "args"    : [ "clean", "-fx", "-d"]}
+                      "args"    : [ "clean", "-fx", "-d"],
+                      "result"  : str()}
                 ]
             },
         ]
