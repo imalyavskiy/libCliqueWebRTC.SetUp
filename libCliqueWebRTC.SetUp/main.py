@@ -6,8 +6,9 @@
 # clone https://github.com/socketio/socket.io-client-cpp
 # update submodules if any
 
-install_dir="D:/TEMP/test_setup"
-vcvarsall_dir=""
+#TODO check if all the variables below are initialized before start doing anything
+install_dir     ="D:/TEMP/test_setup/"
+vcvarsall_dir   ="C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/"
 
 import git_tools
 import log_tools
@@ -51,9 +52,9 @@ config_1_0 = {
     },
     
     "openssl.org" : # the feature
-    { "active"       : False #does this feature enabled or not
+    { "active"       : True #does this feature enabled or not
     , "clone"        : False #does the "git clone" step enabled or not
-    , "build"        : False #does the "build step" enabled or not
+    , "build"        : True #does the "build step" enabled or not
     , "url"          : "git://git.openssl.org/openssl.git"  # git clone source url
     , "target_branch": "branch_OpenSSL_1_0_2l"              # the branch to switch to(should exist) if brunch not exist but tag is provided then branch wiil be created from the tag below
     , "source_tag"   : "OpenSSL_1_0_2l"                     # the tag for the branch to create from
@@ -77,19 +78,19 @@ config_1_0 = {
             [#steps
                 { "env"     : "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/vcvarsall.bat"
                 , "env_arg" : ["amd64"]}
-            ,   { "upd_env" : "Path" # it is necessary to tell where is ml64.exe is located. The Path environment variable will be prended with the path in "prepend"(if "append" then the value pf append
-                , "prepend" : "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.10.25017/bin/HostX64/x64"} #will be appended to Path
-            ,   { "command" : "git"
-                , "args"    : "clean -fx -d"}
-            ,   { "command" : "perl"
-                , "args"    : "Configure VC-WIN64A --prefix=./../openssl_libs/Win64"}
-            ,   { "command" : "cmd"
-                , "args"    : "/c"
-                , "rel_args": ["ms/do_win64a.bat"]} # this step requires ml64.exe
-            ,   { "command" : "cmd"
-                , "args"    : "/c nmake -f ms/ntdll.mak"}
-            ,   { "command" : "cmd"
-                , "args"    : "/c nmake -f ms/ntdll.mak install"}
+#            ,   { "upd_env" : "Path" # it is necessary to tell where is ml64.exe is located. The Path environment variable will be prended with the path in "prepend"(if "append" then the value pf append
+#                , "prepend" : "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.10.25017/bin/HostX64/x64"} #will be appended to Path
+#            ,   { "command" : "git"
+#                , "args"    : "clean -fx -d"}
+#            ,   { "command" : "perl"
+#                , "args"    : "Configure VC-WIN64A --prefix=./../openssl_libs/Win64"}
+#            ,   { "command" : "cmd"
+#                , "args"    : "/c"
+#                , "rel_args": ["ms/do_win64a.bat"]} # this step requires ml64.exe
+#            ,   { "command" : "cmd"
+#                , "args"    : "/c nmake -f ms/ntdll.mak"}
+#            ,   { "command" : "cmd"
+#                , "args"    : "/c nmake -f ms/ntdll.mak install"}
             ]
         ]
     },
@@ -225,7 +226,7 @@ dependencies =\
     { "name"          : "boost",
       "stages"        : [ 
             { "name"  : "clone",
-              "active": True,
+              "active": False,
               "steps" :
                 [
                     { "command" : command.git,
@@ -247,7 +248,7 @@ dependencies =\
                       "args"    : [ "clean", "-fx", "-d"],
                       "result"  : str()},
                     { "command" : command.read_env_vars,
-                      "args"    : [ "--find", "--source=vcvarsall.bat", "--run-with=x86"],
+                      "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x86"],
                       "result"  : {}},
                     { "command" : command.bootstrap,
                       "args"    : [],
@@ -260,26 +261,26 @@ dependencies =\
                                    "link=static", "runtime-link=static", "threading=multi", "address-model=32"],
                       "result"  : str()},
                     { "command" : command.copy,
-                      "args"    : ["./stage/lib", "./stage/lib_Win32"],
+                      "args"    : ["stage/lib", "stage/lib_Win32"],
                       "result"  : str()},
                     { "command" : command.b2,
                       "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", 
                                    "link=static", "runtime-link=static", "threading=multi", "address-model=64"],
                       "result"  : str()},
                     { "command" : command.copy,
-                      "args"    : ["./stage/lib", "./stage/lib_Win64"],
+                      "args"    : ["stage/lib", "stage/lib_Win64"],
                       "result"  : str()},
                 ]
             },
-            { "name"  : "clean",
-              "active": True,
-              "steps" :
-                [
-                    { "command" : command.git,
-                      "args"    : [ "clean", "-fx", "-d"],
-                      "result"  : str()}
-                ]
-            },
+#            { "name"  : "clean",
+#              "active": False,
+#              "steps" :
+#                [
+#                    { "command" : command.git,
+#                      "args"    : [ "clean", "-fx", "-d"],
+#                      "result"  : str()}
+#                ]
+#            },
         ]
     },
     { "name"          : "openssl",
@@ -288,22 +289,86 @@ dependencies =\
               "active": False,
               "steps" :
                 [
+                    { "command" : command.git,
+                      "args"    : [ "clone", "git://git.openssl.org/openssl.git", "./"],
+                      "result"  : str()},
+                    { "command" : command.git,
+                      "args"    : [ "checkout", "-b", "branch_OpenSSL_1_0_2l", "OpenSSL_1_0_2l" ],
+                      "result"  : str()},
+                    { "command" : command.git,
+                      "args"    : ["submodule", "update", "--init", "--"],
+                      "result"  : str()},
                 ]
             },
-            { "name"  : "build",
+            { "name"  : "build_Win32",
               "active": False,
               "steps" :
                 [
+                    { "command" : command.read_env_vars,
+                      "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x86"],
+                      "result"  : str()},
+                    { "command" : command.git,
+                      "args"    : ["clean", "-fx", "-d"],
+                      "result"  : str()},
+                    { "command" : command.perl,
+                      "args"    : ["Configure", "VC-WIN32", "no-asm", "--prefix=./../openssl_libs/Win32"],
+                      "result"  : str()},
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "ms/do_ms.bat"],
+                      "result"  : str() },
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "nmake", "-f", "ms/ntdll.mak"],
+                      "result"  : str()},
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "nmake", "-f", "ms/ntdll.mak install"],
+                      "result"  : str()},
+                    { "command" : command.git,
+                      "args"    : ["clean", "-fx", "-d"],
+                      "result"  : str()},
+                ]
+            },
+            { "name"  : "build_Win64",
+              "active": False,
+              "steps" :
+                [
+                    { "command" : command.read_env_vars,
+                      "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x64"],
+                      "result"  : str()},
+                    { "command" : command.prepend_path_with,
+                      "args"    : ["C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.10.25017/bin/HostX64/x64"],
+                      "result"  : str()},
+                    { "command" : command.git,
+                      "args"    : ["clean", "-fx", "-d"],
+                      "result"  : str()},
+                    { "command" : command.perl,
+                      "args"    : ["Configure", "VC-WIN64A", "--prefix=./../openssl_libs/Win64"],
+                      "result"  : str()},
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "ms/do_win64a.bat"],
+                      "result"  : str() },
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "nmake", "-f", "ms/ntdll.mak"],
+                      "result"  : str()},
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "nmake", "-f", "ms/ntdll.mak", "install"],
+                      "result"  : str()},
+                    { "command" : command.git,
+                      "args"    : ["clean", "-fx", "-d"],
+                      "result"  : str()},
                 ]
             },
             { "name"  : "clean",
               "active": False,
               "steps" :
                 [
+                    { "command" : command.git,
+                      "args"    : ["clean", "-fx", "-d"],
+                      "result"  : str()},
                 ]
             },
         ]
     },
+
     { "name"          : "socket.io",
       "stages"        : [
             { "name"  : "clone",
@@ -326,6 +391,7 @@ dependencies =\
             },
         ]
     },
+
     { "name"          : "depot_tools",
       "stages"        : [
             { "name"  : "clone",
@@ -348,6 +414,7 @@ dependencies =\
             },
         ]
     },
+
     { "name"          : "webrtc",
       "stages"        : [
             { "name"  : "clone",
@@ -663,24 +730,33 @@ def main_2_0():
             return False
         log.info("Processing dependency - \"{0}\"...".format(dependency["name"]))
         for stage in dependency["stages"]:
+            
+            context = {"logger"         : log,              #the context
+                       "install_dir"    : install_dir,
+                       "dependency_dir" : install_dir+dependency["name"]+"/",} 
+
             if sorted(stage.keys()) != sorted(["name", "active", "steps"]):
                 log.error("Invalid stage format")
                 return False
             log.info("Processing stage - \"{0}\"...".format(stage["name"]))
+            if stage["active"] is False:
+                log.info("stage is inactive")
+                continue
             for index in range(0, len(stage["steps"])):
+                step = stage["steps"][index]
                 log.info("step[{0}/{1}]".format(index + 1, len(stage["steps"])))
-                if sorted(stage["steps"][index].keys()) != sorted(["command", "args"]):
+                if sorted(stage["steps"][index].keys()) != sorted(["command", "args", "result"]):
                     log.error("Invalid command format")
                     return False
                 if not os.path.isdir(install_dir+"/"+dependency["name"]):
                     os.makedirs(install_dir+"/"+dependency["name"])
-                stage["steps"][index]["command"](
-                    log,
+                step["command"](
+                    context,
                     install_dir+"/"+dependency["name"],
-                    stage["steps"][index]["args"],
+                    step["args"],
+                    step["result"]
                     )
-                pass
-        pass
+            context.clear() #clean up context
     return True
 
 if __name__ == "__main__":

@@ -35,7 +35,9 @@ def get_environment_from_batch_command(env_cmd, args=None, initial=None):
         for arg in range(1, len(args)):
             arguments+=" {0}".format(args[arg])
 
+    # if env_cmd is not list or tuple
     if not isinstance(env_cmd, (list, tuple)):
+        # convert it into list
         env_cmd = [env_cmd]
     # construct the command that will alter the environment
     env_cmd = subprocess.list2cmdline(env_cmd)
