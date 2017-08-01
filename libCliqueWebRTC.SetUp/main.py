@@ -15,12 +15,59 @@ import command
 
 log = log_tools.Logger()
 
+subdir_boost        = "boost/"
+subdir_openssl      = "openssl/"
+subdir_socketio     = "socket.io/"
+subdir_curl         = "curl/"
+subdir_depot_tools  = "depot_tools/"
+subdir_webrtc       = "webrtc/"
+
+activities = \
+{
+    subdir_boost[:-1]   : { 
+          "clone"       : False,
+          "build_Win32" : False,
+          "build_Win64" : False,
+          "clean"       : False,
+    },
+    subdir_openssl[:-1] : { 
+          "clone"       : False,
+          "build_Win32" : False,
+          "build_Win64" : False,
+          "clean"       : False,
+    },
+    subdir_socketio[:-1]: {
+          "clone"       : False,
+          "build_Win64" : False,
+          "build_Win32" : False,
+          "clean"       : False,
+    },
+    subdir_curl[:-1]    : {
+          "clone"       : False,
+          "build_Win64" : True,
+          "build_Win32" : True,
+          "clean"       : False,
+    },
+    subdir_depot_tools[:-1]: {
+          "clone"       : False,
+          "build_Win32" : False,
+          "build_Win64" : False,
+          "clean"       : False,
+    },
+    subdir_webrtc[:-1]  : {
+          "clone"       : False,
+          "build_Win32" : False,
+          "build_Win64" : False,
+          "clean"       : False,
+    },
+}
+
 dependencies =\
 [
-    { "name"          : "boost",
+    { "name"          : subdir_boost[:-1],
       "stages"        : [ 
             { "name"  : "clone",
-              "active": False,
+              "active": activities[subdir_boost[:-1]]["clone"],
               "steps" :
                 [
                     { "command" : command.git,
@@ -34,8 +81,39 @@ dependencies =\
                       "result"  : str()},
                 ]
             },
-            { "name"  : "build",
-              "active": True,
+            { "name"  : "build_Win64",
+              "active": activities[subdir_boost[:-1]]["build_Win64"],
+              "steps" : 
+                [
+                    { "command" : command.read_env_vars,
+                      "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x64"],
+                      "result"  : {}},
+                    { "command" : command.git,
+                      "args"    : [ "clean", "-fx", "-d"],
+                      "result"  : str()},
+                    { "command" : command.bootstrap,
+                      "args"    : [],
+                      "result"  : str()},
+                    { "command" : command.b2,
+                      "args"    : [ "headers" ],
+                      "result"  : str()},
+                    { "command" : command.b2,
+                      "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", 
+                                   "link=static", "runtime-link=static", "threading=multi", "address-model=64"],
+                      "result"  : str()},
+                    { "command" : command.move,
+                      "args"    : ["stage/lib", "./../boost_libs/lib_Win64"],
+                      "result"  : str()},
+                    { "command" : command.copy,
+                      "args"    : ["boost", "./../boost_libs/boost"],
+                      "result"  : str()},
+                    { "command" : command.git,
+                      "args"    : [ "clean", "-fx", "-d"],
+                      "result"  : str()},
+                ]
+            },
+            { "name"  : "build_Win32",
+              "active": activities[subdir_boost[:-1]]["build_Win32"],
               "steps" : 
                 [
                     { "command" : command.read_env_vars,
@@ -54,23 +132,19 @@ dependencies =\
                       "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", 
                                    "link=static", "runtime-link=static", "threading=multi", "address-model=32"],
                       "result"  : str()},
-                    { "command" : command.copy,
+                    { "command" : command.move,
                       "args"    : ["stage/lib", "./../boost_libs/lib_Win32"],
-                      "result"  : str()},
-                    { "command" : command.b2,
-                      "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", 
-                                   "link=static", "runtime-link=static", "threading=multi", "address-model=64"],
-                      "result"  : str()},
-                    { "command" : command.copy,
-                      "args"    : ["stage/lib", "./../boost_libs/lib_Win64"],
                       "result"  : str()},
                     { "command" : command.copy,
                       "args"    : ["boost", "./../boost_libs/boost"],
                       "result"  : str()},
+                    { "command" : command.git,
+                      "args"    : [ "clean", "-fx", "-d"],
+                      "result"  : str()},
                 ]
             },
             { "name"  : "clean",
-              "active": True,
+              "active": activities[subdir_boost[:-1]]["clean"],
               "steps" :
                 [
                     { "command" : command.git,
@@ -80,10 +154,10 @@ dependencies =\
             },
         ]
     },
-    { "name"          : "openssl",
+    { "name"          : subdir_openssl[:-1],
       "stages"        : [
             { "name"  : "clone",
-              "active": False,
+              "active": activities[subdir_openssl[:-1]]["clone"],
               "steps" :
                 [
                     { "command" : command.git,
@@ -98,7 +172,7 @@ dependencies =\
                 ]
             },
             { "name"  : "build_Win32",
-              "active": True,
+              "active": activities[subdir_openssl[:-1]]["build_Win32"],
               "steps" :
                 [
                     { "command" : command.read_env_vars,
@@ -125,7 +199,7 @@ dependencies =\
                 ]
             },
             { "name"  : "build_Win64",
-              "active": True,
+              "active": activities[subdir_openssl[:-1]]["build_Win64"],
               "steps" :
                 [
                     { "command" : command.read_env_vars,
@@ -155,7 +229,7 @@ dependencies =\
                 ]
             },
             { "name"  : "clean",
-              "active": True,
+              "active": activities[subdir_openssl[:-1]]["clean"],
               "steps" :
                 [
                     { "command" : command.git,
@@ -165,11 +239,10 @@ dependencies =\
             },
         ]
     },
-
-    { "name"          : "socket.io",
+    { "name"          : subdir_socketio[:-1],
       "stages"        : [
             { "name"  : "clone",
-              "active": False,
+              "active": activities[subdir_socketio[:-1]]["clone"],
               "steps" :
                 [
                     { "command" : command.git,
@@ -184,7 +257,7 @@ dependencies =\
                 ]
             },
             { "name"  : "build_Win64",
-              "active": True,
+              "active": activities[subdir_socketio[:-1]]["build_Win64"],
               "steps" :
                 [
                     { "command" : command.read_env_vars,
@@ -199,18 +272,12 @@ dependencies =\
                     { "command" : command.update_environment_variable,
                       "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files/CMake/bin/\""],
                       "result"  : str()},
-                    { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=PATH", "--action=append", "--value=\"C:/Program Files/CMake/bin/\""],
-                      "result"  : str()},
                     { "command" : command.cmake,
                       "args"    : [ "-G \"Visual Studio 15 2017 Win64\"", "./", "-DBOOST_ROOT=\"./../boost_libs/\"", "-DBOOST_LIBRARYDIR=\"./../boost_libs/lib_Win64/\"", 
                                     "-DOPENSSL_ROOT_DIR=\"./../openssl_libs/Win64/\"", "-DCMAKE_CXX_FLAGS=/D_WEBSOCKETPP_NOEXCEPT_" , "-DBoost_USE_STATIC_RUNTIME=ON"],
                       "result"  : str()},
                     { "command" : command.update_environment_variable,
                       "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/MSBuild/15.0/Bin/amd64\""],
-                      "result"  : str()},
-                    { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=PATH", "--action=append", "--value=\"C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/MSBuild/15.0/Bin/amd64\""],
                       "result"  : str()},
                     { "command" : command.msbuild,
                       "args"    : 
@@ -243,7 +310,7 @@ dependencies =\
                 ]
             },
             { "name"  : "build_Win32",
-              "active": True,
+              "active": activities[subdir_socketio[:-1]]["build_Win32"],
               "steps" :
                 [
                     { "command" : command.read_env_vars,
@@ -258,18 +325,12 @@ dependencies =\
                     { "command" : command.update_environment_variable,
                       "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files/CMake/bin/\""],
                       "result"  : str()},
-                    { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=PATH", "--action=append", "--value=\"C:/Program Files/CMake/bin/\""],
-                      "result"  : str()},
                     { "command" : command.cmake,
                       "args"    : [ "-G \"Visual Studio 15 2017\"", "./", "-DBOOST_ROOT=\"./../boost_libs/\"", "-DBOOST_LIBRARYDIR=\"./../boost_libs/lib_Win32/\"", 
                                     "-DOPENSSL_ROOT_DIR=\"./../openssl_libs/Win32/\"", "-DCMAKE_CXX_FLAGS=/D_WEBSOCKETPP_NOEXCEPT_" , "-DBoost_USE_STATIC_RUNTIME=ON"],
                       "result"  : str()},
                     { "command" : command.update_environment_variable,
                       "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/MSBuild/15.0/Bin/amd64\""],
-                      "result"  : str()},
-                    { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=PATH", "--action=append", "--value=\"C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/MSBuild/15.0/Bin/amd64\""],
                       "result"  : str()},
                     { "command" : command.msbuild,
                       "args"    : 
@@ -302,7 +363,7 @@ dependencies =\
                 ]
             },
             { "name"  : "clean",
-              "active": True,
+              "active": activities[subdir_socketio[:-1]]["clean"],
               "steps" :
                 [
                     { "command" : command.git,
@@ -312,46 +373,150 @@ dependencies =\
             },
         ]
     },
-
-    { "name"          : "depot_tools",
+    { "name"          : subdir_curl[:-1],
       "stages"        : [
             { "name"  : "clone",
-              "active": False,
+              "active": activities[subdir_curl[:-1]]["clone"],
+              "steps" :
+                [
+                    { "command" : command.git,
+                      "args"    : [ "clone", "https://github.com/curl/curl", "./"],
+                      "result"  : str()},
+                    { "command" : command.git,
+                      "args"    : [ "checkout", "-b", "branch_curl-7_54_0", "curl-7_54_0" ],
+                      "result"  : str()},
+                    { "command" : command.git,
+                      "args"    : ["submodule", "update", "--init", "--"],
+                      "result"  : str()},
+                ]
+            },
+            { "name"  : "build_Win64",
+              "active": activities[subdir_curl[:-1]]["build_Win64"],
+              "steps" :
+                [
+                    { "command" : command.read_env_vars,
+                      "args"    : [],
+                      "result"  : str()},
+                    { "command" : command.git,
+                      "args"    : ["clean", "-fx", "-d"],
+                      "result"  : str()},
+                    { "command" : command.update_environment_variable,
+                      "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files/CMake/bin/\""],
+                      "result"  : str()},
+                    { "command" : command.cmake,
+                      "args"    : [ "-G \"Visual Studio 15 2017 Win64\"", "./"],
+                      "result"  : str()},
+                    { "command" : command.cmake,
+                      "args"    : [ "--build", ".", "--config Release"],
+                      "result"  : str()},
+                    { "command" : command.cmake,
+                      "args"    : [ "--build", ".", "--config Debug"],
+                      "result"  : str()},
+                    { "command" : command.move,
+                      "args"    : ["./lib/Release", "./../curl_libs/Win64/Realease"],
+                      "result"  : str()},
+                    { "command" : command.move,
+                      "args"    : ["./lib/Debug", "./../curl_libs/Win64/Debug"],
+                      "result"  : str()},
+                    { "command" : command.copy,
+                      "args"    : ["./include/curl", "./../curl_libs/include"],
+                      "result"  : str()},
+                ]
+            },
+            { "name"  : "build_Win32",
+              "active": activities[subdir_curl[:-1]]["build_Win32"],
+              "steps" :
+                [
+                    { "command" : command.read_env_vars,
+                      "args"    : [],
+                      "result"  : str()},
+                    { "command" : command.git,
+                      "args"    : ["clean", "-fx", "-d"],
+                      "result"  : str()},
+                    { "command" : command.update_environment_variable,
+                      "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files/CMake/bin/\""],
+                      "result"  : str()},
+                    { "command" : command.cmake,
+                      "args"    : [ "-G \"Visual Studio 15 2017\"", "./"],
+                      "result"  : str()},
+                    { "command" : command.cmake,
+                      "args"    : [ "--build", ".", "--config Release"],
+                      "result"  : str()},
+                    { "command" : command.cmake,
+                      "args"    : [ "--build", ".", "--config Debug"],
+                      "result"  : str()},
+                    { "command" : command.move,
+                      "args"    : ["./lib/Release", "./../curl_libs/Win32/Realease"],
+                      "result"  : str()},
+                    { "command" : command.move,
+                      "args"    : ["./lib/Debug", "./../curl_libs/Win32/Debug"],
+                      "result"  : str()},
+                    { "command" : command.copy,
+                      "args"    : ["./include/curl", "./../curl_libs/include"],
+                      "result"  : str()},
+                ]
+            },
+            { "name"  : "clean",
+              "active": activities[subdir_curl[:-1]]["clean"],
+              "steps" :
+                [
+                    { "command" : command.git,
+                      "args"    : ["clean", "-fx", "-d"],
+                      "result"  : str()},
+                ]
+            },
+        ]
+    },
+    { "name"          : subdir_depot_tools[:-1],
+      "stages"        : [
+            { "name"  : "clone",
+              "active": activities[subdir_depot_tools[:-1]]["clone"],
               "steps" :
                 [
                 ]
             },
-            { "name"  : "build",
-              "active": False,
+            { "name"  : "build_Win64",
+              "active": activities[subdir_depot_tools[:-1]]["build_Win64"],
+              "steps" :
+                [
+                ]
+            },
+            { "name"  : "build_Win32",
+              "active": activities[subdir_depot_tools[:-1]]["build_Win32"],
               "steps" :
                 [
                 ]
             },
             { "name"  : "clean",
-              "active": False,
+              "active": activities[subdir_depot_tools[:-1]]["clean"],
               "steps" :
                 [
                 ]
             },
         ]
     },
-
-    { "name"          : "webrtc",
+    { "name"          : subdir_webrtc[:-1],
       "stages"        : [
             { "name"  : "clone",
-              "active": False,
+              "active": activities[subdir_webrtc[:-1]]["clone"],
               "steps" :
                 [
                 ]
             },
-            { "name"  : "build",
-              "active": False,
+            { "name"  : "build_Win64",
+              "active": activities[subdir_webrtc[:-1]]["build_Win64"],
+              "steps" :
+                [
+                ]
+            },
+            { "name"  : "build_Win32",
+              "active": activities[subdir_webrtc[:-1]]["build_Win32"],
               "steps" :
                 [
                 ]
             },
             { "name"  : "clean",
-              "active": False,
+              "active": activities[subdir_webrtc[:-1]]["clean"],
               "steps" :
                 [
                 ]
@@ -388,12 +553,9 @@ def main():
                     return False
                 if not os.path.isdir(install_dir+"/"+dependency["name"]):
                     os.makedirs(install_dir+"/"+dependency["name"])
-                step["command"](
-                    context,
-                    install_dir+"/"+dependency["name"],
-                    step["args"],
-                    step["result"]
-                    )
+                
+                step["command"](context, "{0}/{1}".format(install_dir, dependency["name"]), step["args"], step["result"])
+
             #clean up context
             context.clear() 
     return True

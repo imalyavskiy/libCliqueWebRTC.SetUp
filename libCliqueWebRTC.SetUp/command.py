@@ -4,6 +4,38 @@ import log_tools
 import shutil
 import re
 
+class ProgressBar(object):
+    """progress bar class"""
+    def __init__(self, width=10):
+        self.width = width
+        self.pos = 0
+        self.eraser = str()
+        for pos in range(0, self.width + 2):
+            self.eraser += "\b"
+
+    def cleanup(self):
+        pass
+        print(self.eraser, end="", flush=True)
+
+    def display(self):
+        bar = "["
+        for _pos in range(0, self.width):
+            if _pos == self.pos:
+               bar += "*"
+            else:
+               bar += "-"
+        else:
+            bar += "]"
+
+        if self.pos + 1 < self.width:
+           self.pos = self.pos + 1
+        else:
+           self.pos = 0
+
+        self.cleanup()
+
+        print(bar, end="", flush=True)
+
 def run(log, target, args=[], **kwargs):
     pipe = subprocess.PIPE
     
@@ -23,16 +55,33 @@ def run(log, target, args=[], **kwargs):
 
     log.info("Call \"{0}\"... ".format(cmd_str))
 
-    output = subprocess.Popen(cmd_str,
-                                shell=True,
-                                stdin=pipe,
-                                stdout=pipe,
-                                stderr=subprocess.STDOUT,
-                                cwd=cwd_str,
-                                env=env).stdout.read()
+    proc = subprocess.Popen( cmd_str,
+                             shell  = True,
+                             stdin  = pipe,
+                             stdout = pipe,
+                             stderr = subprocess.STDOUT,
+                             cwd    = cwd_str,
+                             env    = env )
+    
+    result  = str()
+    bar     = ProgressBar()
+
+    loop = True
+    while loop:
+        line = proc.stdout.readline().decode('utf8', 'irnore')
+        if len(line) == 0: 
+            loop = False
+            continue
+        #sys.stdout.write(line)
+        bar.display()
+        result += line + "\r\n"
+    else:
+        bar.cleanup()
+        pass
+
     log.info("Done.")
 
-    return output.decode('utf8', 'ignore')
+    return result
 
 def git(context, cwd, args, result, **kwargs):
     log = context.get("logger")
@@ -82,12 +131,33 @@ def copy(context, cwd, args, result, **kwargs):
 
     files = os.listdir(source_dir)
     for file in files:
+        print(" ... Coping {0} from {1} to {2} ... ".format(file, source_dir, target_dir))
+        shutil.copy(source_dir+file, target_dir+file)
+
+    return True
+
+def move(context, cwd, args, result, **kwargs):
+    log = context.get("logger")
+    if log is None:
+        log = log_tools.Logger()
+
+    log.info("... Coping files ...")
+
+    source_dir = context["dependency_dir"]+args[0]+"/"
+    target_dir = context["dependency_dir"]+args[1]+"/"
+
+    if not os.path.isdir(target_dir):
+        os.makedirs(target_dir)
+
+    files = os.listdir(source_dir)
+    for file in files:
         print(" ... Moving {0} from {1} to {2} ... ".format(file, source_dir, target_dir))
         shutil.move(source_dir+file, target_dir+file)
 
     os.rmdir(source_dir)
 
     return True
+
 
 def read_env_vars(context, cwd, args, result, **kwargs):
     log = context.get("logger")
@@ -188,41 +258,60 @@ def args_parser(log, args, result):
     return parameters
 
 def update_environment_variable(context, cwd, args, result, **kwargs):
+    # strinpping logger
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
 
+    # reporting the command short description
     log.info("... Updating environment variables ...")
 
+    # checking context exists
     if context.get("environment") is None:
         return False
 
+    # checking and parsing parameters
     parameters = args_parser(log, args, result)
-    
     if parameters is None:
         return False
-
     if sorted(parameters.keys()) != sorted(["variable", "action", "value"]):
         result+="[update_environment_variable] invalid parameters set"+"\n"
         return False
-    
+    # stripping quoted string    
     if parameters["value"][0] == "\"" and parameters["value"][-1] == "\"":
         parameters["value"] = parameters["value"][1:-1]
-
-    if context["environment"].get(parameters["variable"]) is None:
+    
+    # checking if target environment variable present in the list
+    
+    variable_key = None
+    for key in context["environment"]:
+        if key.upper() ==  parameters["variable"].upper():
+            variable_key = key
+            break
+    if variable_key is None:
         return False
     
+    # check if the value already exist
+    value = parameters["value"] if not parameters["value"].endswith("/") and not parameters["value"].endswith("\\") \
+                                else parameters["value"][:-1]
+
+    if value in context["environment"][variable_key] \
+        or value.replace("/", "\\") in context["environment"][variable_key] \
+            or value.replace("\\", "/") in context["environment"][variable_key]:
+        return True
+
+    # executing certain action
     if parameters["action"] == "prepend":
         prepend = str()
         for item in args:
             prepend += item +";"
-        context["environment"][parameters["variable"]] = prepend + context["environment"][parameters["variable"]]
+        context["environment"][variable_key] = prepend + context["environment"][variable_key]
     elif parameters["action"] == "append":
-        if not context["environment"][parameters["variable"]].endswith(";"):
-            context["environment"][parameters["variable"]] +=";"
-        context["environment"][parameters["variable"]] += parameters["value"]
-        if not context["environment"][parameters["variable"]].endswith(";"):
-            context["environment"][parameters["variable"]] +=";"
+        if not context["environment"][variable_key].endswith(";"):
+            context["environment"][variable_key] +=";"
+        context["environment"][variable_key] += parameters["value"]
+        if not context["environment"][variable_key].endswith(";"):
+            context["environment"][variable_key] +=";"
     
     return True
 
@@ -293,5 +382,12 @@ def msbuild(context, cwd, args, result, **kwargs):
             args[arg] = context["dependency_dir"]+args[arg]
     
     result = run(log, "msbuild", args, env = None if context.get("environment") is None else context["environment"], cwd=cwd)
+    if result.endswith("\n"):
+        result = result[:-1]
+    result = result.replace("\r", "");
+    result_lines = result.split("\n");
     
+    if "\'msbuild\' is not recognized as an internal or external command," in result_lines[0]:
+        return False
+
     return True
