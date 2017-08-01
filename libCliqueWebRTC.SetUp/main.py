@@ -4,10 +4,11 @@
 #TODO pass install target dir by argv
 #TODO check all the pathes required before start
 #TODO write the application long and the logs of instruments(commands) to the bit log file
-#TODO keep an eye on the running command in order to do not stuck when heavy process is working
 
-install_dir     ="D:/TEMP/test_setup/"
-vcvarsall_dir   ="C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/"
+install_dir     = "D:/TEMP/test_setup/"
+vcvarsall_dir   = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/"
+msbuild_dir     = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.10.25017/bin/HostX64/x64/"
+cmake_dir       = "C:/Program Files/CMake/bin/"
 
 import log_tools
 import os
@@ -46,7 +47,7 @@ activities = \
           "clone"       : False,
           "build_Win64" : True,
           "build_Win32" : True,
-          "clean"       : False,
+          "clean"       : True,
     },
     subdir_depot_tools[:-1]: {
           "clone"       : False,
@@ -102,10 +103,10 @@ dependencies =\
                                    "link=static", "runtime-link=static", "threading=multi", "address-model=64"],
                       "result"  : str()},
                     { "command" : command.move,
-                      "args"    : ["stage/lib", "./../boost_libs/lib_Win64"],
+                      "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win64\""],
                       "result"  : str()},
                     { "command" : command.copy,
-                      "args"    : ["boost", "./../boost_libs/boost"],
+                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\""],
                       "result"  : str()},
                     { "command" : command.git,
                       "args"    : [ "clean", "-fx", "-d"],
@@ -133,10 +134,10 @@ dependencies =\
                                    "link=static", "runtime-link=static", "threading=multi", "address-model=32"],
                       "result"  : str()},
                     { "command" : command.move,
-                      "args"    : ["stage/lib", "./../boost_libs/lib_Win32"],
+                      "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win32\"", "--filter=\"\""],
                       "result"  : str()},
                     { "command" : command.copy,
-                      "args"    : ["boost", "./../boost_libs/boost"],
+                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\"", "--filter=\"\""],
                       "result"  : str()},
                     { "command" : command.git,
                       "args"    : [ "clean", "-fx", "-d"],
@@ -206,7 +207,7 @@ dependencies =\
                       "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x64"],
                       "result"  : str()},
                     { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=Path", "--action=prepend", "--value=C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.10.25017/bin/HostX64/x64"],
+                      "args"    : ["--variable=Path", "--action=prepend", "--value="+msbuild_dir],
                       "result"  : str()},
                     { "command" : command.git,
                       "args"    : ["clean", "-fx", "-d"],
@@ -277,7 +278,7 @@ dependencies =\
                                     "-DOPENSSL_ROOT_DIR=\"./../openssl_libs/Win64/\"", "-DCMAKE_CXX_FLAGS=/D_WEBSOCKETPP_NOEXCEPT_" , "-DBoost_USE_STATIC_RUNTIME=ON"],
                       "result"  : str()},
                     { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/MSBuild/15.0/Bin/amd64\""],
+                      "args"    : ["--variable=Path", "--action=append", "--value="+msbuild_dir],
                       "result"  : str()},
                     { "command" : command.msbuild,
                       "args"    : 
@@ -330,7 +331,7 @@ dependencies =\
                                     "-DOPENSSL_ROOT_DIR=\"./../openssl_libs/Win32/\"", "-DCMAKE_CXX_FLAGS=/D_WEBSOCKETPP_NOEXCEPT_" , "-DBoost_USE_STATIC_RUNTIME=ON"],
                       "result"  : str()},
                     { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/MSBuild/15.0/Bin/amd64\""],
+                      "args"    : ["--variable=Path", "--action=append", "--value="+msbuild_dir],
                       "result"  : str()},
                     { "command" : command.msbuild,
                       "args"    : 
@@ -401,7 +402,7 @@ dependencies =\
                       "args"    : ["clean", "-fx", "-d"],
                       "result"  : str()},
                     { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files/CMake/bin/\""],
+                      "args"    : ["--variable=Path", "--action=append", "--value="+cmake_dir],
                       "result"  : str()},
                     { "command" : command.cmake,
                       "args"    : [ "-G \"Visual Studio 15 2017 Win64\"", "./"],
@@ -413,13 +414,13 @@ dependencies =\
                       "args"    : [ "--build", ".", "--config Debug"],
                       "result"  : str()},
                     { "command" : command.move,
-                      "args"    : ["./lib/Release", "./../curl_libs/Win64/Realease"],
+                      "args"    : ["--src=\"./lib/Release\"", "--dst=\"./../curl_libs/Win64/Release\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""],
                       "result"  : str()},
                     { "command" : command.move,
-                      "args"    : ["./lib/Debug", "./../curl_libs/Win64/Debug"],
+                      "args"    : ["--src=\"./lib/Debug\"", "--dst=\"./../curl_libs/Win64/Debug\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""],
                       "result"  : str()},
                     { "command" : command.copy,
-                      "args"    : ["./include/curl", "./../curl_libs/include"],
+                      "args"    : ["--src=\"./include/curl\"", "--dst=\"./../curl_libs/include\"" , "--filter=\"*.h;*.hpp\""],
                       "result"  : str()},
                 ]
             },
@@ -434,7 +435,7 @@ dependencies =\
                       "args"    : ["clean", "-fx", "-d"],
                       "result"  : str()},
                     { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files/CMake/bin/\""],
+                      "args"    : ["--variable=Path", "--action=append", "--value="+cmake_dir],
                       "result"  : str()},
                     { "command" : command.cmake,
                       "args"    : [ "-G \"Visual Studio 15 2017\"", "./"],
@@ -446,13 +447,13 @@ dependencies =\
                       "args"    : [ "--build", ".", "--config Debug"],
                       "result"  : str()},
                     { "command" : command.move,
-                      "args"    : ["./lib/Release", "./../curl_libs/Win32/Realease"],
+                      "args"    : ["--src=\"./lib/Release\"", "--dst=\"./../curl_libs/Win32/Release\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""],
                       "result"  : str()},
                     { "command" : command.move,
-                      "args"    : ["./lib/Debug", "./../curl_libs/Win32/Debug"],
+                      "args"    : ["--src=\"./lib/Debug\"", "--dst=\"./../curl_libs/Win32/Debug\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""],
                       "result"  : str()},
                     { "command" : command.copy,
-                      "args"    : ["./include/curl", "./../curl_libs/include"],
+                      "args"    : ["--src=\"./include/curl\"", "--dst=\"./../curl_libs/include\"" , "--filter=\"*.h;*.hpp\""],
                       "result"  : str()},
                 ]
             },

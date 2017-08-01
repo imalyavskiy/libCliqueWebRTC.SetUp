@@ -117,47 +117,84 @@ def bootstrap(context, cwd, args, result, **kwargs):
     return True
 
 def copy(context, cwd, args, result, **kwargs):
-    log = context.get("logger")
-    if log is None:
-        log = log_tools.Logger()
-
-    log.info("... Coping files ...")
-
-    source_dir = context["dependency_dir"]+args[0]+"/"
-    target_dir = context["dependency_dir"]+args[1]+"/"
-
-    if not os.path.isdir(target_dir):
-        os.makedirs(target_dir)
-
-    files = os.listdir(source_dir)
-    for file in files:
-        print(" ... Coping {0} from {1} to {2} ... ".format(file, source_dir, target_dir))
-        shutil.copy(source_dir+file, target_dir+file)
-
-    return True
+    kwargs["keep"]=True
+    return move(context, cwd, args, result, **kwargs)
 
 def move(context, cwd, args, result, **kwargs):
+    keep = kwargs["keep"] if kwargs.get("keep") is not None else False
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
 
     log.info("... Coping files ...")
 
-    source_dir = context["dependency_dir"]+args[0]+"/"
-    target_dir = context["dependency_dir"]+args[1]+"/"
+    # checking and parsing parameters
+    parameters = parse_args(log, args, result)
+    if parameters is None:
+        return False
+    
+    keys = parameters.keys()
+    if not ("src" in keys and "dst" in keys):
+        result+="[move] lack of mandatory parameters"+"\n"
+        return False
+
+    # stripping quoted string    
+    if parameters["src"][0] == "\"" and parameters["src"][-1] == "\"":
+        parameters["src"] = parameters["src"][1:-1]
+        parameters["src"] += "/" if not (parameters["src"].endswith("/") or parameters["src"].endswith("\\")) else ""
+    if parameters["dst"][0] == "\"" and parameters["dst"][-1] == "\"":
+        parameters["dst"] = parameters["dst"][1:-1]
+        parameters["dst"] += "/" if not (parameters["dst"].endswith("/") or parameters["dst"].endswith("\\")) else ""
+    if parameters.get("filter") is not None:
+        if parameters["filter"][0] == "\"" and parameters["filter"][-1] == "\"":
+            parameters["filter"] = parameters["filter"][1:-1]
+    
+    filters =[]
+    if parameters.get("filter") is not None:
+        filters = parameters["filter"].split(";")
+    
+    for cFilter in range(0, len(filters)):
+        filters[cFilter] = filters[cFilter].replace("*","^[A-Za-z0-9_]*")
+        filters[cFilter]+="$"
+
+    source_dir = context["dependency_dir"]+parameters["src"]
+    target_dir = context["dependency_dir"]+parameters["dst"]
 
     if not os.path.isdir(target_dir):
         os.makedirs(target_dir)
 
-    files = os.listdir(source_dir)
-    for file in files:
-        print(" ... Moving {0} from {1} to {2} ... ".format(file, source_dir, target_dir))
-        shutil.move(source_dir+file, target_dir+file)
-
-    os.rmdir(source_dir)
+    dir_items = os.listdir(source_dir)
+    for dir_item in dir_items:
+        if os.path.isfile(source_dir+dir_item):
+            if len(filters) > 0:
+                for filter in filters:
+                    res = re.match(filter, dir_item)
+                    if res is not None:
+                        print(" ... Moving {0} from {1} to {2} ... ".format(dir_item, source_dir, target_dir))
+                        shutil.move(source_dir+dir_item, target_dir+dir_item) if keep is False \
+                            else shutil.copy(source_dir+dir_item, target_dir+dir_item)
+                        break
+                    pass
+            else:
+                print(" ... Moving {0} from {1} to {2} ... ".format(dir_item, source_dir, target_dir))
+                shutil.move(source_dir+dir_item, target_dir+dir_item) if keep is False \
+                    else shutil.copy(source_dir+dir_item, target_dir+dir_item)
+                pass
+            pass
+        elif os.path.isdir(source_dir+dir_item):
+            newparameters = parameters.copy()
+            newparameters["src"]+=dir_item+"/"
+            newparameters["dst"]+=dir_item+"/"
+            newargs = []
+            for param in newparameters:
+                newargs.append("--{0}={1}".format(param, "\""+newparameters[param]+"\""))
+            move(context, cwd, newargs, result, **kwargs)
+            pass
+    
+    if not keep:
+        shutil.rmtree(source_dir, ignore_errors=True, onerror=print("Error: Cannot remove source directory"))
 
     return True
-
 
 def read_env_vars(context, cwd, args, result, **kwargs):
     log = context.get("logger")
@@ -238,7 +275,7 @@ def cmd(context, cwd, args, result, **kwargs):
     
     return True
 
-def args_parser(log, args, result):
+def parse_args(log, args, result):
     
     def strip_arg(arg):
         arg = arg[2:]
@@ -247,6 +284,11 @@ def args_parser(log, args, result):
 
     parameters = {}
     for arg in args:
+        match = re.match("^--filter=", arg)
+        if match is not None:
+            key, val = strip_arg(arg)
+            parameters[key] = val
+            continue
         match = re.match("^--[A-Za-z_0-9\-]*=[A-Za-z_0-9/#\"\-\:\s\.\(\)]*$", arg)
         if match is not None and match.group() == arg:
             key, val = strip_arg(arg)
@@ -271,7 +313,7 @@ def update_environment_variable(context, cwd, args, result, **kwargs):
         return False
 
     # checking and parsing parameters
-    parameters = args_parser(log, args, result)
+    parameters = parse_args(log, args, result)
     if parameters is None:
         return False
     if sorted(parameters.keys()) != sorted(["variable", "action", "value"]):
@@ -322,7 +364,7 @@ def edit_file(context, cwd, args, result, **kwargs):
 
     log.info("... Editing file ...")
 
-    parameters = args_parser(log, args, result)
+    parameters = parse_args(log, args, result)
     
     if parameters is None:
         return False
@@ -358,7 +400,7 @@ def edit_file(context, cwd, args, result, **kwargs):
     os.rename(context["dependency_dir"]+parameters["file"]+".tmp", context["dependency_dir"]+parameters["file"])
 
     return True
-    
+
 def cmake(context, cwd, args, result, **kwargs):
     log = context.get("logger")
     if log is None:
