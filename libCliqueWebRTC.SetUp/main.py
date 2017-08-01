@@ -45,14 +45,13 @@ activities = \
     },
     subdir_curl[:-1]    : {
           "clone"       : False,
-          "build_Win64" : True,
-          "build_Win32" : True,
-          "clean"       : True,
+          "build_Win64" : False,
+          "build_Win32" : False,
+          "clean"       : False,
     },
     subdir_depot_tools[:-1]: {
-          "clone"       : False,
-          "build_Win32" : False,
-          "build_Win64" : False,
+          "clone"       : True,
+          "setup"       : True,
           "clean"       : False,
     },
     subdir_webrtc[:-1]  : {
@@ -474,18 +473,33 @@ dependencies =\
               "active": activities[subdir_depot_tools[:-1]]["clone"],
               "steps" :
                 [
+                    { "command" : command.git,
+                      "args"    : [ "clone", "https://chromium.googlesource.com/chromium/tools/depot_tools.git", "./"],
+                      "result"  : str()},
                 ]
             },
-            { "name"  : "build_Win64",
-              "active": activities[subdir_depot_tools[:-1]]["build_Win64"],
+            { "name"  : "setup",
+              "active": activities[subdir_depot_tools[:-1]]["setup"],
               "steps" :
                 [
-                ]
-            },
-            { "name"  : "build_Win32",
-              "active": activities[subdir_depot_tools[:-1]]["build_Win32"],
-              "steps" :
-                [
+#                    { "command" : command.git,
+#                      "args"    : ["clean", "-fx", "-d"],
+#                      "result"  : str()},
+                    { "command" : command.read_env_vars,
+                      "args"    : [],
+                      "result"  : str()},
+                    { "command" : command.update_environment_variable,
+                      "args"    : ["--variable=Path", "--action=prepend", "--value="+install_dir+subdir_depot_tools],
+                      "result"  : str()},
+#                    { "command" : command.gclient,
+#                      "args"    : [],
+#                      "result"  : str()},
+#                    { "command" : command.gclient,
+#                      "args"    : ["sync"],
+#                      "result"  : str()},
+                    { "command" : command.create_environment_variable,
+                      "args"    : ["--variable=DEPOT_TOOLS_WIN_TOOLCHAIN", "--value=0"],
+                      "result"  : str()},
                 ]
             },
             { "name"  : "clean",
@@ -525,6 +539,30 @@ dependencies =\
         ]
     }
 ]
+
+"""
+Сборка webrtc:
+Release_x64:
+	>gn gen out/Release_x64 --args="is_debug=false target_cpu=\"x64\""
+	>gn clean out/Release_x64
+	>gm -C out/Release_x64
+
+Debug_x64:
+	>gn gen out/Debug_x64 --args="is_debug=true target_cpu=\"x64\""
+	>gn clean out/Debug_x64
+	>gm -C out/Debug_x64
+
+Release_x86:
+	>gn gen out/Release_x86 --args="is_debug=false target_cpu=\"x86\""
+	>gn clean out/Release_x86
+	>gm -C out/Release_x86
+
+Debug_x86
+	>gn gen out/Debug_x86 --args="is_debug=true target_cpu=\"x86\""
+	>gn clean out/Debug_x86
+	>gm -C out/Debug_x86
+
+"""
 
 def main():
     for dependency in dependencies:

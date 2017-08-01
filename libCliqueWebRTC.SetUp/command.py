@@ -92,6 +92,15 @@ def git(context, cwd, args, result, **kwargs):
 
     return True
 
+def gclient(context, cwd, args, result, **kwargs):
+    log = context.get("logger")
+    if log is None:
+        log = log_tools.Logger()
+
+    result = run(log, "gclient", args, env = None if context.get("environment") is None else context["environment"], cwd=cwd)
+
+    return True
+
 def b2(context, cwd, args, result, **kwargs):
     log = context.get("logger")
     if log is None:
@@ -344,10 +353,7 @@ def update_environment_variable(context, cwd, args, result, **kwargs):
 
     # executing certain action
     if parameters["action"] == "prepend":
-        prepend = str()
-        for item in args:
-            prepend += item +";"
-        context["environment"][variable_key] = prepend + context["environment"][variable_key]
+        context["environment"][variable_key] = value + ";" + context["environment"][variable_key]
     elif parameters["action"] == "append":
         if not context["environment"][variable_key].endswith(";"):
             context["environment"][variable_key] +=";"
@@ -432,4 +438,41 @@ def msbuild(context, cwd, args, result, **kwargs):
     if "\'msbuild\' is not recognized as an internal or external command," in result_lines[0]:
         return False
 
+    return True
+
+def create_environment_variable(context, cwd, args, result, **kwargs):
+    # strinpping logger
+    log = context.get("logger")
+    if log is None:
+        log = log_tools.Logger()
+
+    # reporting the command short description
+    log.info("... Creating environment variables ...")
+
+    # checking context exists
+    if context.get("environment") is None:
+        return False
+
+    # checking and parsing parameters
+    parameters = parse_args(log, args, result)
+    if parameters is None:
+        return False
+    if sorted(parameters.keys()) != sorted(["variable", "value"]):
+        result+="[create_environment_variable] invalid parameters set"+"\n"
+        return False
+
+    # stripping quoted string    
+    if parameters["value"][0] == "\"" and parameters["value"][-1] == "\"":
+        parameters["value"] = parameters["value"][1:-1]
+    
+    # checking if target environment variable present in the list
+    variable_key = None
+    for key in context["environment"]:
+        if key.upper() ==  parameters["variable"].upper():
+            variable_key = key
+            break
+    
+    # set given variable's value
+    context["environment"][parameters["variable"] if variable_key is None else variable_key]=parameters["value"]
+    
     return True

@@ -24,10 +24,6 @@
     <Compile Include="command.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="env_extractor.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="git_tools.py" />
     <Compile Include="log_tools.py">
       <SubType>Code</SubType>
     </Compile>
