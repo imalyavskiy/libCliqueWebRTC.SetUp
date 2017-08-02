@@ -53,7 +53,8 @@ def run(log, target, args=[], **kwargs):
     else:
         env = None
 
-    log.info("Call \"{0}\"... ".format(cmd_str))
+    log.info("Calling to \"{0}\"".format(cmd_str))
+    log.info("        at \"{0}\"".format(cwd_str))
 
     proc = subprocess.Popen( cmd_str,
                              shell  = True,
@@ -69,10 +70,13 @@ def run(log, target, args=[], **kwargs):
     loop = True
     while loop:
         line = proc.stdout.readline().decode('utf8', 'irnore')
+        
         if len(line) == 0: 
             loop = False
             continue
-        #sys.stdout.write(line)
+        
+        log.report("\t", line, hide=True)
+        
         bar.display()
         result += line + "\r\n"
     else:

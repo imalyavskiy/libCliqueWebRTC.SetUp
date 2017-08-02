@@ -5,6 +5,7 @@
 #TODO check all the pathes required before start
 #TODO write the application long and the logs of instruments(commands) to the bit log file
 
+log_file_name   = "set_up"
 install_dir     = "D:/TEMP/test_setup/"
 vcvarsall_dir   = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/"
 msbuild_dir     = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.10.25017/bin/HostX64/x64/"
@@ -14,14 +15,13 @@ import log_tools
 import os
 import command
 
-log = log_tools.Logger()
+log = log_tools.Logger(install_dir, log_file_name)
 
 subdir_boost        = "boost/"
 subdir_openssl      = "openssl/"
 subdir_socketio     = "socket.io/"
 subdir_curl         = "curl/"
 subdir_depot_tools  = "depot_tools/"
-subdir_webrtc       = "webrtc/"
 
 activities = \
 {
@@ -50,14 +50,8 @@ activities = \
           "clean"       : False,
     },
     subdir_depot_tools[:-1]: {
-          "clone"       : True,
-          "setup"       : True,
-          "clean"       : False,
-    },
-    subdir_webrtc[:-1]  : {
           "clone"       : False,
-          "build_Win32" : False,
-          "build_Win64" : False,
+          "setup"       : False,
           "clean"       : False,
     },
 }
@@ -482,23 +476,29 @@ dependencies =\
               "active": activities[subdir_depot_tools[:-1]]["setup"],
               "steps" :
                 [
-#                    { "command" : command.git,
-#                      "args"    : ["clean", "-fx", "-d"],
-#                      "result"  : str()},
+                    { "command" : command.git,
+                      "args"    : ["clean", "-fx", "-d"],
+                      "result"  : str()},
                     { "command" : command.read_env_vars,
                       "args"    : [],
                       "result"  : str()},
                     { "command" : command.update_environment_variable,
                       "args"    : ["--variable=Path", "--action=prepend", "--value="+install_dir+subdir_depot_tools],
                       "result"  : str()},
-#                    { "command" : command.gclient,
-#                      "args"    : [],
-#                      "result"  : str()},
-#                    { "command" : command.gclient,
-#                      "args"    : ["sync"],
-#                      "result"  : str()},
+                    { "command" : command.gclient,
+                      "args"    : [],
+                      "result"  : str()},
+                    { "command" : command.gclient,
+                      "args"    : ["sync"],
+                      "result"  : str()},
                     { "command" : command.create_environment_variable,
                       "args"    : ["--variable=DEPOT_TOOLS_WIN_TOOLCHAIN", "--value=0"],
+                      "result"  : str()},
+                    { "command" : command.create_environment_variable,
+                      "args"    : ["--variable=GYP_MSVS_OVERRIDE_PATH", "--value=\"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\""],
+                      "result"  : str()},
+                    { "command" : command.create_environment_variable,
+                      "args"    : ["--variable=GYP_MSVS_VERSION", "--value=2017"],
                       "result"  : str()},
                 ]
             },
@@ -510,34 +510,6 @@ dependencies =\
             },
         ]
     },
-    { "name"          : subdir_webrtc[:-1],
-      "stages"        : [
-            { "name"  : "clone",
-              "active": activities[subdir_webrtc[:-1]]["clone"],
-              "steps" :
-                [
-                ]
-            },
-            { "name"  : "build_Win64",
-              "active": activities[subdir_webrtc[:-1]]["build_Win64"],
-              "steps" :
-                [
-                ]
-            },
-            { "name"  : "build_Win32",
-              "active": activities[subdir_webrtc[:-1]]["build_Win32"],
-              "steps" :
-                [
-                ]
-            },
-            { "name"  : "clean",
-              "active": activities[subdir_webrtc[:-1]]["clean"],
-              "steps" :
-                [
-                ]
-            },
-        ]
-    }
 ]
 
 """
@@ -569,7 +541,7 @@ def main():
         if sorted(dependency.keys()) != sorted(["name", "stages"]):
             log.error("Invalid dependency format")
             return False
-        log.info("Processing dependency - \"{0}\"...".format(dependency["name"]))
+        log.info("=== Processing dependency - \"{0}\"...".format(dependency["name"]))
         for stage in dependency["stages"]:
             
             # the context
@@ -580,7 +552,7 @@ def main():
             if sorted(stage.keys()) != sorted(["name", "active", "steps"]):
                 log.error("Invalid stage format")
                 return False
-            log.info("Processing stage - \"{0}\"...".format(stage["name"]))
+            log.info(">>> Processing stage - \"{0}\"...".format(stage["name"]))
             if stage["active"] is False:
                 log.info("stage is inactive")
                 continue
