@@ -37,103 +37,94 @@ class ProgressBar(object):
         print(bar, end="", flush=True)
 
 def run(log, target, args=[], **kwargs):
-    pipe = subprocess.PIPE
+    try:
+        pipe = subprocess.PIPE
     
-    cmd_str = target
-    for arg in args:
-        cmd_str += " " + arg
+        cmd_str = target
+        for arg in args:
+            cmd_str += " " + arg
 
-    cwd_str = os.getcwd()
-    cwd = kwargs.get("cwd")
-    if cwd is not None:
-        cwd_str = cwd
+        cwd_str = os.getcwd()
+        cwd = kwargs.get("cwd")
+        if cwd is not None:
+            cwd_str = cwd
     
-    if "env" in kwargs:
-        env = kwargs["env"]
-    else:
-        env = None
+        if "env" in kwargs:
+            env = kwargs["env"]
+        else:
+            env = None
 
-    log.info("Calling to \"{0}\"".format(cmd_str))
-    log.info("        at \"{0}\"".format(cwd_str))
+        log.info("Calling to \"{0}\"".format(cmd_str))
+        log.info("        at \"{0}\"".format(cwd_str))
 
-    proc = subprocess.Popen( cmd_str,
-                             shell  = True,
-                             stdin  = pipe,
-                             stdout = pipe,
-                             stderr = subprocess.STDOUT,
-                             cwd    = cwd_str,
-                             env    = env )
+        proc = subprocess.Popen( cmd_str,
+                                 shell  = True,
+                                 stdin  = pipe,
+                                 stdout = pipe,
+                                 stderr = subprocess.STDOUT,
+                                 cwd    = cwd_str,
+                                 env    = env )
     
-    result  = str()
-    bar     = ProgressBar()
 
-    loop = True
-    while loop:
-        line = proc.stdout.readline().decode('utf8', 'irnore')
-        
-        if len(line) == 0: 
-            loop = False
-            continue
-        
-        log.report("\t", line, hide=True)
-        
-        bar.display()
-        result += line + "\r\n"
-    else:
-        bar.cleanup()
-        pass
-
-    log.info("Done.")
-
-    return result
-
-def git(context, cwd, args, result, **kwargs):
-    log = context.get("logger")
-    if log is None:
-        log = log_tools.Logger()
-
-    result = run(log, "git", args, env = None if context.get("environment") is None else context["environment"], cwd=cwd)
-
-    return True
-
-def gclient(context, cwd, args, result, **kwargs):
-    log = context.get("logger")
-    if log is None:
-        log = log_tools.Logger()
-
-    result = run(log, "gclient", args, env = None if context.get("environment") is None else context["environment"], cwd=cwd)
-
-    return True
-
-def b2(context, cwd, args, result, **kwargs):
-    log = context.get("logger")
-    if log is None:
-        log = log_tools.Logger()
-    
-    if not os.path.isfile(cwd+"/b2.exe"):
+        report = proc.stdout.read().decode('utf8', 'irnore').split("\n")
+        for line in report:
+            log.report("\t", line, hide=True)
+#        bar     = ProgressBar()
+#
+#        loop = True
+#        while loop:
+#            line = proc.stdout.readline().decode('utf8', 'irnore')
+#        
+#            if len(line) == 0: 
+#                loop = False
+#                continue
+#        
+#            log.report("\t", line, hide=True)
+#        
+#            bar.display()
+#            result += line + "\r\n"
+#        else:
+#            bar.cleanup()
+#            pass
+#
+        log.info("Done.")
+    except:
         return False
-
-    result = run(log, "b2", args, env = None if context.get("environment") is None else context["environment"], cwd=cwd)
-    
     return True
 
-def bootstrap(context, cwd, args, result, **kwargs):
+def git(context, args, **kwargs):
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
 
-    if not os.path.isfile(cwd+"/bootstrap.bat"):
-        return False
+    return run(log, "git", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
 
-    result = run(log, "bootstrap.bat", args, env = None if context.get("environment") is None else context["environment"], cwd=cwd)
+def b2(context, args, **kwargs):
+    log = context.get("logger")
+    if log is None:
+        log = log_tools.Logger()
     
-    return True
+    if not os.path.isfile(context["cwd"]+"/b2.exe"):
+        return False, ""
 
-def copy(context, cwd, args, result, **kwargs):
+    return run(log, "b2", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
+
+def bootstrap(context, args, **kwargs):
+    log = context.get("logger")
+    if log is None:
+        log = log_tools.Logger()
+
+    if not os.path.isfile(context["cwd"]+"/bootstrap.bat"):
+        return False, ""
+
+    return run(log, "bootstrap.bat", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
+
+def copy(context, args, **kwargs):
     kwargs["keep"]=True
-    return move(context, cwd, args, result, **kwargs)
+    return move(context, args, **kwargs)
 
-def move(context, cwd, args, result, **kwargs):
+def move(context, args, **kwargs):
+    result = str()
     keep = kwargs["keep"] if kwargs.get("keep") is not None else False
     log = context.get("logger")
     if log is None:
@@ -142,13 +133,12 @@ def move(context, cwd, args, result, **kwargs):
     log.info("... Coping files ...")
 
     # checking and parsing parameters
-    parameters = parse_args(log, args, result)
+    parameters, result = parse_args(log, args, result)
     if parameters is None:
         return False
     
     keys = parameters.keys()
     if not ("src" in keys and "dst" in keys):
-        result+="[move] lack of mandatory parameters"+"\n"
         return False
 
     # stripping quoted string    
@@ -201,7 +191,8 @@ def move(context, cwd, args, result, **kwargs):
             newargs = []
             for param in newparameters:
                 newargs.append("--{0}={1}".format(param, "\""+newparameters[param]+"\""))
-            move(context, cwd, newargs, result, **kwargs)
+            res_bool, res_text, move(context, newargs, **kwargs)
+            ressult += res_text
             pass
     
     if not keep:
@@ -209,7 +200,7 @@ def move(context, cwd, args, result, **kwargs):
 
     return True
 
-def read_env_vars(context, cwd, args, result, **kwargs):
+def read_env_vars(context, args, **kwargs):
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -226,11 +217,9 @@ def read_env_vars(context, cwd, args, result, **kwargs):
 
     # if context is not dict
     if not isinstance(context, (dict)):
-        print("{0}\n{1}".format(result, "ERROR: Context is not a dictionary"))
         return False
 
     if context.get("environment") is not None:
-        print("{0}\n{1}".format(result, "ERROR: Context already has the \"environment\" key"))
         return False
 
     initial = None if kwargs.get("initial") is None else kwargs["initial"]
@@ -266,16 +255,14 @@ def read_env_vars(context, cwd, args, result, **kwargs):
     
     return True
 
-def perl(context, cwd, args, result, **kwargs):
+def perl(context, args, **kwargs):
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
     
-    result = run(log, "perl", args, env = None if context.get("environment") is None else context["environment"], cwd=cwd)
-    
-    return True
+    return run(log, "perl", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
 
-def cmd(context, cwd, args, result, **kwargs):
+def cmd(context, args, **kwargs):
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -284,11 +271,9 @@ def cmd(context, cwd, args, result, **kwargs):
         if args[arg].endswith(".bat") and not os.path.isabs(args[arg]):
             args[arg] = context["dependency_dir"]+args[arg]
     
-    result = run(log, "cmd", args, env = None if context.get("environment") is None else context["environment"], cwd=cwd)
-    
-    return True
+    return run(log, "cmd", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
 
-def parse_args(log, args, result):
+def parse_args(log, args):
     
     def strip_arg(arg):
         arg = arg[2:]
@@ -307,12 +292,11 @@ def parse_args(log, args, result):
             key, val = strip_arg(arg)
             parameters[key] = val
         else:
-            result+="[update_environment_variable] The \"{0}\" parameter is invalid".format(arg)+"\n"
+            log.report("\t", "[update_environment_variable] The \"{0}\" parameter is invalid".format(arg)+"\n", hide=True)
             return None
-
     return parameters
 
-def update_environment_variable(context, cwd, args, result, **kwargs):
+def update_environment_variable(context, args, **kwargs):
     # strinpping logger
     log = context.get("logger")
     if log is None:
@@ -326,7 +310,7 @@ def update_environment_variable(context, cwd, args, result, **kwargs):
         return False
 
     # checking and parsing parameters
-    parameters = parse_args(log, args, result)
+    parameters = parse_args(log, args)
     if parameters is None:
         return False
     if sorted(parameters.keys()) != sorted(["variable", "action", "value"]):
@@ -367,7 +351,7 @@ def update_environment_variable(context, cwd, args, result, **kwargs):
     
     return True
 
-def edit_file(context, cwd, args, result, **kwargs):
+def edit_file(context, args, **kwargs):
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -411,7 +395,7 @@ def edit_file(context, cwd, args, result, **kwargs):
 
     return True
 
-def cmake(context, cwd, args, result, **kwargs):
+def cmake(context, args, **kwargs):
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -420,11 +404,11 @@ def cmake(context, cwd, args, result, **kwargs):
         if args[arg].endswith(".bat") and not os.path.isabs(args[arg]):
             args[arg] = context["dependency_dir"]+args[arg]
     
-    result = run(log, "cmake", args, env = None if context.get("environment") is None else context["environment"], cwd=cwd)
+    result = run(log, "cmake", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
     
     return True
 
-def msbuild(context, cwd, args, result, **kwargs):
+def msbuild(context, args, **kwargs):
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -433,7 +417,7 @@ def msbuild(context, cwd, args, result, **kwargs):
         if args[arg].endswith(".bat") and not os.path.isabs(args[arg]):
             args[arg] = context["dependency_dir"]+args[arg]
     
-    result = run(log, "msbuild", args, env = None if context.get("environment") is None else context["environment"], cwd=cwd)
+    result = run(log, "msbuild", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
     if result.endswith("\n"):
         result = result[:-1]
     result = result.replace("\r", "");
@@ -444,7 +428,7 @@ def msbuild(context, cwd, args, result, **kwargs):
 
     return True
 
-def create_environment_variable(context, cwd, args, result, **kwargs):
+def create_environment_variable(context, args, **kwargs):
     # strinpping logger
     log = context.get("logger")
     if log is None:
@@ -458,7 +442,7 @@ def create_environment_variable(context, cwd, args, result, **kwargs):
         return False
 
     # checking and parsing parameters
-    parameters = parse_args(log, args, result)
+    parameters = parse_args(log, args)
     if parameters is None:
         return False
     if sorted(parameters.keys()) != sorted(["variable", "value"]):
@@ -479,4 +463,15 @@ def create_environment_variable(context, cwd, args, result, **kwargs):
     # set given variable's value
     context["environment"][parameters["variable"] if variable_key is None else variable_key]=parameters["value"]
     
+    return True
+
+def cd(context, args, **kwargs):
+    if len(args) == 0:
+        log.error("Cannot change directory")
+        return False
+    if len(args) > 1:
+        log.error("Cannot multiply change directory for single time")
+
+    if os.path.isdir(context["cwd"]+args[0]):
+        context["cwd"]+=args[0]
     return True

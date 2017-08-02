@@ -14,8 +14,8 @@ cmake_dir       = "C:/Program Files/CMake/bin/"
 import log_tools
 import os
 import command
-
-log = log_tools.Logger(install_dir, log_file_name)
+import json
+import sys
 
 subdir_boost        = "boost/"
 subdir_openssl      = "openssl/"
@@ -50,8 +50,8 @@ activities = \
           "clean"       : False,
     },
     subdir_depot_tools[:-1]: {
-          "clone"       : False,
-          "setup"       : False,
+          "clone"       : True,
+          "setup"       : True,
           "clean"       : False,
     },
 }
@@ -65,14 +65,11 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.git,
-                      "args"    : [ "clone", "https://github.com/boostorg/boost", "./"],
-                      "result"  : str()},
+                      "args"    : [ "clone", "https://github.com/boostorg/boost", "./"]},
                     { "command" : command.git,
-                      "args"    : [ "checkout", "-b", "branch_boost-1.64.0", "boost-1.64.0" ],
-                      "result"  : str()},
+                      "args"    : [ "checkout", "-b", "branch_boost-1.64.0", "boost-1.64.0" ]},
                     { "command" : command.git,
-                      "args"    : ["submodule", "update", "--init", "--"],
-                      "result"  : str()},
+                      "args"    : ["submodule", "update", "--init", "--"]},
                 ]
             },
             { "name"  : "build_Win64",
@@ -80,30 +77,21 @@ dependencies =\
               "steps" : 
                 [
                     { "command" : command.read_env_vars,
-                      "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x64"],
-                      "result"  : {}},
+                      "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x64"]},
                     { "command" : command.git,
-                      "args"    : [ "clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : [ "clean", "-fx", "-d"]},
                     { "command" : command.bootstrap,
-                      "args"    : [],
-                      "result"  : str()},
+                      "args"    : []},
                     { "command" : command.b2,
-                      "args"    : [ "headers" ],
-                      "result"  : str()},
+                      "args"    : [ "headers" ]},
                     { "command" : command.b2,
-                      "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", 
-                                   "link=static", "runtime-link=static", "threading=multi", "address-model=64"],
-                      "result"  : str()},
+                      "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", "link=static", "runtime-link=static", "threading=multi", "address-model=64"]},
                     { "command" : command.move,
-                      "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win64\""],
-                      "result"  : str()},
+                      "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win64\""]},
                     { "command" : command.copy,
-                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\""],
-                      "result"  : str()},
+                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\""]},
                     { "command" : command.git,
-                      "args"    : [ "clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : [ "clean", "-fx", "-d"]},
                 ]
             },
             { "name"  : "build_Win32",
@@ -111,30 +99,21 @@ dependencies =\
               "steps" : 
                 [
                     { "command" : command.read_env_vars,
-                      "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x86"],
-                      "result"  : {}},
+                      "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x86"]},
                     { "command" : command.git,
-                      "args"    : [ "clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : [ "clean", "-fx", "-d"]},
                     { "command" : command.bootstrap,
-                      "args"    : [],
-                      "result"  : str()},
+                      "args"    : []},
                     { "command" : command.b2,
-                      "args"    : [ "headers" ],
-                      "result"  : str()},
+                      "args"    : [ "headers" ]},
                     { "command" : command.b2,
-                      "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", 
-                                   "link=static", "runtime-link=static", "threading=multi", "address-model=32"],
-                      "result"  : str()},
+                      "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", "link=static", "runtime-link=static", "threading=multi", "address-model=32"]},
                     { "command" : command.move,
-                      "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win32\"", "--filter=\"\""],
-                      "result"  : str()},
+                      "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win32\"", "--filter=\"\""]},
                     { "command" : command.copy,
-                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\"", "--filter=\"\""],
-                      "result"  : str()},
+                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\"", "--filter=\"\""]},
                     { "command" : command.git,
-                      "args"    : [ "clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : [ "clean", "-fx", "-d"]},
                 ]
             },
             { "name"  : "clean",
@@ -142,8 +121,7 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.git,
-                      "args"    : [ "clean", "-fx", "-d"],
-                      "result"  : str()}
+                      "args"    : [ "clean", "-fx", "-d"]}
                 ]
             },
         ]
@@ -155,14 +133,11 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.git,
-                      "args"    : [ "clone", "git://git.openssl.org/openssl.git", "./"],
-                      "result"  : str()},
+                      "args"    : [ "clone", "git://git.openssl.org/openssl.git", "./"]},
                     { "command" : command.git,
-                      "args"    : [ "checkout", "-b", "branch_OpenSSL_1_0_2l", "OpenSSL_1_0_2l" ],
-                      "result"  : str()},
+                      "args"    : [ "checkout", "-b", "branch_OpenSSL_1_0_2l", "OpenSSL_1_0_2l" ]},
                     { "command" : command.git,
-                      "args"    : ["submodule", "update", "--init", "--"],
-                      "result"  : str()},
+                      "args"    : ["submodule", "update", "--init", "--"]},
                 ]
             },
             { "name"  : "build_Win32",
@@ -170,26 +145,19 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.read_env_vars,
-                      "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x86"],
-                      "result"  : str()},
+                      "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x86"]},
                     { "command" : command.git,
-                      "args"    : ["clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : ["clean", "-fx", "-d"]},
                     { "command" : command.perl,
-                      "args"    : ["Configure", "VC-WIN32", "no-asm", "--prefix=./../openssl_libs/Win32"],
-                      "result"  : str()},
+                      "args"    : ["Configure", "VC-WIN32", "no-asm", "--prefix=./../openssl_libs/Win32"]},
                     { "command" : command.cmd,
-                      "args"    : ["/c", "ms/do_ms.bat"],
-                      "result"  : str() },
+                      "args"    : ["/c", "ms/do_ms.bat"]},
                     { "command" : command.cmd,
-                      "args"    : ["/c", "nmake", "-f", "ms/ntdll.mak"],
-                      "result"  : str()},
+                      "args"    : ["/c", "nmake", "-f", "ms/ntdll.mak"]},
                     { "command" : command.cmd,
-                      "args"    : ["/c", "nmake", "-f", "ms/ntdll.mak install"],
-                      "result"  : str()},
+                      "args"    : ["/c", "nmake", "-f", "ms/ntdll.mak install"]},
                     { "command" : command.git,
-                      "args"    : ["clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : ["clean", "-fx", "-d"]},
                 ]
             },
             { "name"  : "build_Win64",
@@ -197,29 +165,21 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.read_env_vars,
-                      "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x64"],
-                      "result"  : str()},
+                      "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x64"]},
                     { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=Path", "--action=prepend", "--value="+msbuild_dir],
-                      "result"  : str()},
+                      "args"    : ["--variable=Path", "--action=prepend", "--value="+msbuild_dir]},
                     { "command" : command.git,
-                      "args"    : ["clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : ["clean", "-fx", "-d"]},
                     { "command" : command.perl,
-                      "args"    : ["Configure", "VC-WIN64A", "--prefix=./../openssl_libs/Win64"],
-                      "result"  : str()},
+                      "args"    : ["Configure", "VC-WIN64A", "--prefix=./../openssl_libs/Win64"]},
                     { "command" : command.cmd,
-                      "args"    : ["/c", "ms/do_win64a.bat"],
-                      "result"  : str() },
+                      "args"    : ["/c", "ms/do_win64a.bat"]},
                     { "command" : command.cmd,
-                      "args"    : ["/c", "nmake", "-f", "ms/ntdll.mak"],
-                      "result"  : str()},
+                      "args"    : ["/c", "nmake", "-f", "ms/ntdll.mak"]},
                     { "command" : command.cmd,
-                      "args"    : ["/c", "nmake", "-f", "ms/ntdll.mak", "install"],
-                      "result"  : str()},
+                      "args"    : ["/c", "nmake", "-f", "ms/ntdll.mak", "install"]},
                     { "command" : command.git,
-                      "args"    : ["clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : ["clean", "-fx", "-d"]},
                 ]
             },
             { "name"  : "clean",
@@ -227,8 +187,7 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.git,
-                      "args"    : ["clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : ["clean", "-fx", "-d"]},
                 ]
             },
         ]
@@ -240,14 +199,11 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.git,
-                      "args"    : [ "clone", "https://github.com/socketio/socket.io-client-cpp", "./"],
-                      "result"  : str()},
+                      "args"    : [ "clone", "https://github.com/socketio/socket.io-client-cpp", "./"]},
                     { "command" : command.git,
-                      "args"    : [ "checkout", "-b", "branch_1.6.1", "1.6.1" ],
-                      "result"  : str()},
+                      "args"    : [ "checkout", "-b", "branch_1.6.1", "1.6.1" ]},
                     { "command" : command.git,
-                      "args"    : ["submodule", "update", "--init", "--"],
-                      "result"  : str()},
+                      "args"    : ["submodule", "update", "--init", "--"]},
                 ]
             },
             { "name"  : "build_Win64",
@@ -255,52 +211,25 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.read_env_vars,
-                      "args"    : [],
-                      "result"  : str()},
+                      "args"    : []},
                     { "command" : command.git,
-                      "args"    : ["clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : ["clean", "-fx", "-d"]},
                     { "command" : command.edit_file,
-                      "args"    : ["--file=CMakeLists.txt", "--action=remove", "--string=\"set(Boost_USE_STATIC_RUNTIME OFF)\""],
-                      "result"  : str()},
+                      "args"    : ["--file=CMakeLists.txt", "--action=remove", "--string=\"set(Boost_USE_STATIC_RUNTIME OFF)\""]},
                     { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files/CMake/bin/\""],
-                      "result"  : str()},
+                      "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files/CMake/bin/\""]},
                     { "command" : command.cmake,
-                      "args"    : [ "-G \"Visual Studio 15 2017 Win64\"", "./", "-DBOOST_ROOT=\"./../boost_libs/\"", "-DBOOST_LIBRARYDIR=\"./../boost_libs/lib_Win64/\"", 
-                                    "-DOPENSSL_ROOT_DIR=\"./../openssl_libs/Win64/\"", "-DCMAKE_CXX_FLAGS=/D_WEBSOCKETPP_NOEXCEPT_" , "-DBoost_USE_STATIC_RUNTIME=ON"],
-                      "result"  : str()},
+                      "args"    : [ "-G \"Visual Studio 15 2017 Win64\"", "./", "-DBOOST_ROOT=\"./../boost_libs/\"", "-DBOOST_LIBRARYDIR=\"./../boost_libs/lib_Win64/\"", "-DOPENSSL_ROOT_DIR=\"./../openssl_libs/Win64/\"", "-DCMAKE_CXX_FLAGS=/D_WEBSOCKETPP_NOEXCEPT_" , "-DBoost_USE_STATIC_RUNTIME=ON"]},
                     { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=Path", "--action=append", "--value="+msbuild_dir],
-                      "result"  : str()},
+                      "args"    : ["--variable=Path", "--action=append", "--value="+msbuild_dir]},
                     { "command" : command.msbuild,
-                      "args"    : 
-                        [ "sioclient.vcxproj"
-                        , "/t:Rebuild"
-                        , "/p:Configuration=Debug;Platform=x64;OutDir=./../socket.io_libs/Win64/Debug"
-                        ],
-                      "result"  : str()},
+                      "args"    : [ "sioclient.vcxproj", "/t:Rebuild", "/p:Configuration=Debug;Platform=x64;OutDir=./../socket.io_libs/Win64/Debug"]},
                     { "command" : command.msbuild,
-                      "args"    : 
-                        [ "sioclient.vcxproj"
-                        , "/t:Rebuild"
-                        , "/p:Configuration=Release;Platform=x64;OutDir=./../socket.io_libs/Win64/Release"
-                        ],
-                      "result"  : str()},
+                      "args"    : [ "sioclient.vcxproj", "/t:Rebuild", "/p:Configuration=Release;Platform=x64;OutDir=./../socket.io_libs/Win64/Release"]},
                     { "command" : command.msbuild,
-                      "args"    : 
-                        [ "sioclient_tls.vcxproj"
-                        , "/t:Rebuild"
-                        , "/p:Configuration=Debug;Platform=x64;OutDir=./../socket.io_libs/Win64/Debug"
-                        ],
-                      "result"  : str()},
+                      "args"    : [ "sioclient_tls.vcxproj", "/t:Rebuild", "/p:Configuration=Debug;Platform=x64;OutDir=./../socket.io_libs/Win64/Debug"]},
                     { "command" : command.msbuild,
-                      "args"    : 
-                        [ "sioclient_tls.vcxproj"
-                        , "/t:Rebuild"
-                        , "/p:Configuration=Release;Platform=x64;OutDir=./../socket.io_libs/Win64/Release"
-                        ],
-                      "result"  : str()},
+                      "args"    : [ "sioclient_tls.vcxproj", "/t:Rebuild", "/p:Configuration=Release;Platform=x64;OutDir=./../socket.io_libs/Win64/Release"]},
                 ]
             },
             { "name"  : "build_Win32",
@@ -308,52 +237,25 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.read_env_vars,
-                      "args"    : [],
-                      "result"  : str()},
+                      "args"    : []},
                     { "command" : command.git,
-                      "args"    : ["clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : ["clean", "-fx", "-d"]},
                     { "command" : command.edit_file,
-                      "args"    : ["--file=CMakeLists.txt", "--action=remove", "--string=\"set(Boost_USE_STATIC_RUNTIME OFF)\""],
-                      "result"  : str()},
+                      "args"    : ["--file=CMakeLists.txt", "--action=remove", "--string=\"set(Boost_USE_STATIC_RUNTIME OFF)\""]},
                     { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files/CMake/bin/\""],
-                      "result"  : str()},
+                      "args"    : ["--variable=Path", "--action=append", "--value=\"C:/Program Files/CMake/bin/\""]},
                     { "command" : command.cmake,
-                      "args"    : [ "-G \"Visual Studio 15 2017\"", "./", "-DBOOST_ROOT=\"./../boost_libs/\"", "-DBOOST_LIBRARYDIR=\"./../boost_libs/lib_Win32/\"", 
-                                    "-DOPENSSL_ROOT_DIR=\"./../openssl_libs/Win32/\"", "-DCMAKE_CXX_FLAGS=/D_WEBSOCKETPP_NOEXCEPT_" , "-DBoost_USE_STATIC_RUNTIME=ON"],
-                      "result"  : str()},
+                      "args"    : [ "-G \"Visual Studio 15 2017\"", "./", "-DBOOST_ROOT=\"./../boost_libs/\"", "-DBOOST_LIBRARYDIR=\"./../boost_libs/lib_Win32/\"", "-DOPENSSL_ROOT_DIR=\"./../openssl_libs/Win32/\"", "-DCMAKE_CXX_FLAGS=/D_WEBSOCKETPP_NOEXCEPT_" , "-DBoost_USE_STATIC_RUNTIME=ON"]},
                     { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=Path", "--action=append", "--value="+msbuild_dir],
-                      "result"  : str()},
+                      "args"    : ["--variable=Path", "--action=append", "--value="+msbuild_dir]},
                     { "command" : command.msbuild,
-                      "args"    : 
-                        [ "sioclient.vcxproj"
-                        , "/t:Rebuild"
-                        , "/p:Configuration=Debug;Platform=x86;OutDir=./../socket.io_libs/Win32/Debug"
-                        ],
-                      "result"  : str()},
+                      "args"    : [ "sioclient.vcxproj", "/t:Rebuild", "/p:Configuration=Debug;Platform=x86;OutDir=./../socket.io_libs/Win32/Debug"]},
                     { "command" : command.msbuild,
-                      "args"    : 
-                        [ "sioclient.vcxproj"
-                        , "/t:Rebuild"
-                        , "/p:Configuration=Release;Platform=x86;OutDir=./../socket.io_libs/Win32/Release"
-                        ],
-                      "result"  : str()},
+                      "args"    : [ "sioclient.vcxproj", "/t:Rebuild", "/p:Configuration=Release;Platform=x86;OutDir=./../socket.io_libs/Win32/Release"]},
                     { "command" : command.msbuild,
-                      "args"    : 
-                        [ "sioclient_tls.vcxproj"
-                        , "/t:Rebuild"
-                        , "/p:Configuration=Debug;Platform=x86;OutDir=./../socket.io_libs/Win32/Debug"
-                        ],
-                      "result"  : str()},
+                      "args"    : [ "sioclient_tls.vcxproj", "/t:Rebuild", "/p:Configuration=Debug;Platform=x86;OutDir=./../socket.io_libs/Win32/Debug"]},
                     { "command" : command.msbuild,
-                      "args"    : 
-                        [ "sioclient_tls.vcxproj"
-                        , "/t:Rebuild"
-                        , "/p:Configuration=Release;Platform=x86;OutDir=./../socket.io_libs/Win32/Release"
-                        ],
-                      "result"  : str()},
+                      "args"    : [ "sioclient_tls.vcxproj", "/t:Rebuild", "/p:Configuration=Release;Platform=x86;OutDir=./../socket.io_libs/Win32/Release"]},
                 ]
             },
             { "name"  : "clean",
@@ -361,8 +263,7 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.git,
-                      "args"    : ["clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : ["clean", "-fx", "-d"]},
                 ]
             },
         ]
@@ -374,14 +275,11 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.git,
-                      "args"    : [ "clone", "https://github.com/curl/curl", "./"],
-                      "result"  : str()},
+                      "args"    : [ "clone", "https://github.com/curl/curl", "./"]},
                     { "command" : command.git,
-                      "args"    : [ "checkout", "-b", "branch_curl-7_54_0", "curl-7_54_0" ],
-                      "result"  : str()},
+                      "args"    : [ "checkout", "-b", "branch_curl-7_54_0", "curl-7_54_0" ]},
                     { "command" : command.git,
-                      "args"    : ["submodule", "update", "--init", "--"],
-                      "result"  : str()},
+                      "args"    : ["submodule", "update", "--init", "--"]},
                 ]
             },
             { "name"  : "build_Win64",
@@ -389,32 +287,23 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.read_env_vars,
-                      "args"    : [],
-                      "result"  : str()},
+                      "args"    : []},
                     { "command" : command.git,
-                      "args"    : ["clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : ["clean", "-fx", "-d"]},
                     { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=Path", "--action=append", "--value="+cmake_dir],
-                      "result"  : str()},
+                      "args"    : ["--variable=Path", "--action=append", "--value="+cmake_dir]},
                     { "command" : command.cmake,
-                      "args"    : [ "-G \"Visual Studio 15 2017 Win64\"", "./"],
-                      "result"  : str()},
+                      "args"    : [ "-G \"Visual Studio 15 2017 Win64\"", "./"]},
                     { "command" : command.cmake,
-                      "args"    : [ "--build", ".", "--config Release"],
-                      "result"  : str()},
+                      "args"    : [ "--build", ".", "--config Release"]},
                     { "command" : command.cmake,
-                      "args"    : [ "--build", ".", "--config Debug"],
-                      "result"  : str()},
+                      "args"    : [ "--build", ".", "--config Debug"]},
                     { "command" : command.move,
-                      "args"    : ["--src=\"./lib/Release\"", "--dst=\"./../curl_libs/Win64/Release\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""],
-                      "result"  : str()},
+                      "args"    : ["--src=\"./lib/Release\"", "--dst=\"./../curl_libs/Win64/Release\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""]},
                     { "command" : command.move,
-                      "args"    : ["--src=\"./lib/Debug\"", "--dst=\"./../curl_libs/Win64/Debug\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""],
-                      "result"  : str()},
+                      "args"    : ["--src=\"./lib/Debug\"", "--dst=\"./../curl_libs/Win64/Debug\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""]},
                     { "command" : command.copy,
-                      "args"    : ["--src=\"./include/curl\"", "--dst=\"./../curl_libs/include\"" , "--filter=\"*.h;*.hpp\""],
-                      "result"  : str()},
+                      "args"    : ["--src=\"./include/curl\"", "--dst=\"./../curl_libs/include\"" , "--filter=\"*.h;*.hpp\""]},
                 ]
             },
             { "name"  : "build_Win32",
@@ -422,32 +311,23 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.read_env_vars,
-                      "args"    : [],
-                      "result"  : str()},
+                      "args"    : []},
                     { "command" : command.git,
-                      "args"    : ["clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : ["clean", "-fx", "-d"]},
                     { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=Path", "--action=append", "--value="+cmake_dir],
-                      "result"  : str()},
+                      "args"    : ["--variable=Path", "--action=append", "--value="+cmake_dir]},
                     { "command" : command.cmake,
-                      "args"    : [ "-G \"Visual Studio 15 2017\"", "./"],
-                      "result"  : str()},
+                      "args"    : [ "-G \"Visual Studio 15 2017\"", "./"]},
                     { "command" : command.cmake,
-                      "args"    : [ "--build", ".", "--config Release"],
-                      "result"  : str()},
+                      "args"    : [ "--build", ".", "--config Release"]},
                     { "command" : command.cmake,
-                      "args"    : [ "--build", ".", "--config Debug"],
-                      "result"  : str()},
+                      "args"    : [ "--build", ".", "--config Debug"]},
                     { "command" : command.move,
-                      "args"    : ["--src=\"./lib/Release\"", "--dst=\"./../curl_libs/Win32/Release\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""],
-                      "result"  : str()},
+                      "args"    : ["--src=\"./lib/Release\"", "--dst=\"./../curl_libs/Win32/Release\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""]},
                     { "command" : command.move,
-                      "args"    : ["--src=\"./lib/Debug\"", "--dst=\"./../curl_libs/Win32/Debug\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""],
-                      "result"  : str()},
+                      "args"    : ["--src=\"./lib/Debug\"", "--dst=\"./../curl_libs/Win32/Debug\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""]},
                     { "command" : command.copy,
-                      "args"    : ["--src=\"./include/curl\"", "--dst=\"./../curl_libs/include\"" , "--filter=\"*.h;*.hpp\""],
-                      "result"  : str()},
+                      "args"    : ["--src=\"./include/curl\"", "--dst=\"./../curl_libs/include\"" , "--filter=\"*.h;*.hpp\""]},
                 ]
             },
             { "name"  : "clean",
@@ -455,8 +335,7 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.git,
-                      "args"    : ["clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : ["clean", "-fx", "-d"]},
                 ]
             },
         ]
@@ -468,8 +347,7 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.git,
-                      "args"    : [ "clone", "https://chromium.googlesource.com/chromium/tools/depot_tools.git", "./"],
-                      "result"  : str()},
+                      "args"    : [ "clone", "https://chromium.googlesource.com/chromium/tools/depot_tools.git", "./"]},
                 ]
             },
             { "name"  : "setup",
@@ -477,29 +355,29 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.git,
-                      "args"    : ["clean", "-fx", "-d"],
-                      "result"  : str()},
+                      "args"    : ["clean", "-fx", "-d"]},
                     { "command" : command.read_env_vars,
-                      "args"    : [],
-                      "result"  : str()},
+                      "args"    : []},
                     { "command" : command.update_environment_variable,
-                      "args"    : ["--variable=Path", "--action=prepend", "--value="+install_dir+subdir_depot_tools],
-                      "result"  : str()},
-                    { "command" : command.gclient,
-                      "args"    : [],
-                      "result"  : str()},
-                    { "command" : command.gclient,
-                      "args"    : ["sync"],
-                      "result"  : str()},
+                      "args"    : ["--variable=Path", "--action=prepend", "--value="+install_dir+subdir_depot_tools]},
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "gclient"]},
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "gclient", "sync"]},                    #gclient that is gclient.bat and located at depot_tools/
                     { "command" : command.create_environment_variable,
-                      "args"    : ["--variable=DEPOT_TOOLS_WIN_TOOLCHAIN", "--value=0"],
-                      "result"  : str()},
+                      "args"    : ["--variable=DEPOT_TOOLS_WIN_TOOLCHAIN", "--value=0"]},
                     { "command" : command.create_environment_variable,
-                      "args"    : ["--variable=GYP_MSVS_OVERRIDE_PATH", "--value=\"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\""],
-                      "result"  : str()},
+                      "args"    : ["--variable=GYP_MSVS_OVERRIDE_PATH", "--value=\"C:/Program Files (x86)/Microsoft Visual Studio/2017/Community\""]},
                     { "command" : command.create_environment_variable,
-                      "args"    : ["--variable=GYP_MSVS_VERSION", "--value=2017"],
-                      "result"  : str()},
+                      "args"    : ["--variable=GYP_MSVS_VERSION", "--value=2017"]},
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "mkdir", "\"./../webrtc-checkout\""]},
+                    { "command" : command.cd,
+                      "args"    : ["./../webrtc-checkout"]},
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "fetch.bat", "--nohooks", "webrtc"]},   #fetch that is fetch.bat and located at depot_tools/
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "gclient", "sync"]},                    #gclient that is gclient.bat and located at depot_tools/
                 ]
             },
             { "name"  : "clean",
@@ -537,43 +415,68 @@ Debug_x86
 """
 
 def main():
-    for dependency in dependencies:
-        if sorted(dependency.keys()) != sorted(["name", "stages"]):
+    log.info("Starting...")
+
+    for cDep in range(0,len(dependencies)):
+        if sorted(dependencies[cDep].keys()) != sorted(["name", "stages"]):
             log.error("Invalid dependency format")
             return False
-        log.info("=== Processing dependency - \"{0}\"...".format(dependency["name"]))
-        for stage in dependency["stages"]:
+        log.info("=== Processing dependency - \"{0}\"...".format(dependencies[cDep]["name"]))
+        for cStage in range(0, len(dependencies[cDep]["stages"])):
             
             # the context
             context = {"logger"         : log,
                        "install_dir"    : install_dir,
-                       "dependency_dir" : install_dir+dependency["name"]+"/",} 
+                       "dependency_dir" : install_dir+dependencies[cDep]["name"]+"/",
+                       "cwd"            : "{0}/{1}".format(install_dir, dependencies[cDep]["name"])} 
 
-            if sorted(stage.keys()) != sorted(["name", "active", "steps"]):
+            if sorted(dependencies[cDep]["stages"][cStage].keys()) != sorted(["name", "active", "steps"]):
                 log.error("Invalid stage format")
                 return False
-            log.info(">>> Processing stage - \"{0}\"...".format(stage["name"]))
-            if stage["active"] is False:
+            log.info(">>> Processing stage - \"{0}\"...".format(dependencies[cDep]["stages"][cStage]["name"]))
+            if dependencies[cDep]["stages"][cStage]["active"] is False:
                 log.info("stage is inactive")
                 continue
-            for index in range(0, len(stage["steps"])):
-                step = stage["steps"][index]
-                log.info("step[{0}/{1}]".format(index + 1, len(stage["steps"])))
-                if sorted(stage["steps"][index].keys()) != sorted(["command", "args", "result"]):
+            for cStep in range(0, len(dependencies[cDep]["stages"][cStage]["steps"])):
+                log.info("step[{0}/{1}]".format(cStep + 1, len(dependencies[cDep]["stages"][cStage]["steps"])))
+                if sorted(dependencies[cDep]["stages"][cStage]["steps"][cStep].keys()) != sorted(["command", "args"]):
                     log.error("Invalid command format")
                     return False
-                if not os.path.isdir(install_dir+"/"+dependency["name"]):
-                    os.makedirs(install_dir+"/"+dependency["name"])
                 
-                step["command"](context, "{0}/{1}".format(install_dir, dependency["name"]), step["args"], step["result"])
+                if not os.path.isdir(install_dir+"/"+dependencies[cDep]["name"]):
+                    os.makedirs(install_dir+"/"+dependencies[cDep]["name"])
+                
+                result = dependencies[cDep]["stages"][cStage]["steps"][cStep]["command"](
+                    context,                                                        # context
+                    dependencies[cDep]["stages"][cStage]["steps"][cStep]["args"])   # arguments
 
             #clean up context
             context.clear() 
     return True
 
 if __name__ == "__main__":
+    if not os.path.isdir(install_dir):
+        print("The \"{0}\" does not exist...".format(install_dir))
+        try:
+            print("Creating directory \"{0}\"...".format(install_dir))
+            os.makedirs(install_dir)
+        except OSError:
+            print("Oops! Cannot create \"{0}\"...".format(install_dir))
+            print("\tcheck the path is accessible or may be there is unsufficient access rights")
+            print("..! TERMINATING !..")
+            exit()
+    else:
+        print("The install dir that is \"{0}\" already exist. Creating logger".format(install_dir))
+
+    log = log_tools.Logger(install_dir, log_file_name)
+    log.info("=== SWITCHES")
+    activities_text = json.dumps(activities, sort_keys=False, indent=4).split("\n")
+    for line in activities_text:
+        log.info(line)
+
     if not main():
         log.error()
         exit()
+
     log.success()
     exit()
