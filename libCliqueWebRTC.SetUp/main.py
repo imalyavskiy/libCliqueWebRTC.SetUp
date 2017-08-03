@@ -9,6 +9,8 @@ log_file_name   = "set_up"
 install_dir     = "D:/TEMP/test_setup/"
 vcvarsall_dir   = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/"
 msbuild_dir     = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.10.25017/bin/HostX64/x64/"
+vstudio_dir     = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/" 
+vstudio_ver     = "2017"
 cmake_dir       = "C:/Program Files/CMake/bin/"
 
 import log_tools
@@ -50,8 +52,10 @@ activities = \
           "clean"       : False,
     },
     subdir_depot_tools[:-1]: {
-          "clone"       : True,
-          "setup"       : True,
+          "clone"       : False,
+          "setup"       : False,
+          "build_Win64" : True,
+          "build_Win32" : True,
           "clean"       : False,
     },
 }
@@ -362,14 +366,13 @@ dependencies =\
                       "args"    : ["--variable=Path", "--action=prepend", "--value="+install_dir+subdir_depot_tools]},
                     { "command" : command.cmd,
                       "args"    : ["/c", "gclient"]},
-                    { "command" : command.cmd,
-                      "args"    : ["/c", "gclient", "sync"]},                    #gclient that is gclient.bat and located at depot_tools/
                     { "command" : command.create_environment_variable,
                       "args"    : ["--variable=DEPOT_TOOLS_WIN_TOOLCHAIN", "--value=0"]},
                     { "command" : command.create_environment_variable,
-                      "args"    : ["--variable=GYP_MSVS_OVERRIDE_PATH", "--value=\"C:/Program Files (x86)/Microsoft Visual Studio/2017/Community\""]},
+                      "args"    : ["--variable=GYP_MSVS_OVERRIDE_PATH", "--value=\"C:/Program Files (x86)/Microsoft Visual Studio/2017/Community\""]}, #TODO move to the beginning os the file
                     { "command" : command.create_environment_variable,
                       "args"    : ["--variable=GYP_MSVS_VERSION", "--value=2017"]},
+                    # oprations below take about 3 hours to finish
                     { "command" : command.cmd,
                       "args"    : ["/c", "mkdir", "\"./../webrtc-checkout\""]},
                     { "command" : command.cd,
@@ -378,6 +381,62 @@ dependencies =\
                       "args"    : ["/c", "fetch.bat", "--nohooks", "webrtc"]},   #fetch that is fetch.bat and located at depot_tools/
                     { "command" : command.cmd,
                       "args"    : ["/c", "gclient", "sync"]},                    #gclient that is gclient.bat and located at depot_tools/
+                ]
+            },
+            { "name"  : "build_Win64",
+              "active": activities[subdir_depot_tools[:-1]]["build_Win64"],
+              "steps" : 
+                [
+                    { "command" : command.read_env_vars,
+                      "args"    : []},
+                    { "command" : command.update_environment_variable,
+                      "args"    : ["--variable=Path", "--action=prepend", "--value="+install_dir+subdir_depot_tools]},
+                    { "command" : command.create_environment_variable,
+                      "args"    : ["--variable=DEPOT_TOOLS_WIN_TOOLCHAIN", "--value=0"]},
+                    { "command" : command.create_environment_variable,
+                      "args"    : ["--variable=GYP_MSVS_OVERRIDE_PATH", "--value="+vstudio_dir]},
+                    { "command" : command.create_environment_variable,
+                      "args"    : ["--variable=GYP_MSVS_VERSION", "--value="+vstudio_ver]},
+                    { "command" : command.cd,
+                      "args"    : ["./../webrtc-checkout/src"]},
+
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "gn.bat", "gen \"../../webrtc_lib/Win64/Debug\" --args=\"is_debug=true target_cpu=\\\"x64\\\" rtc_include_tests=false\""]},
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "ninja", "-C \"../../webrtc_lib/Win64/Debug\""]},
+
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "gn.bat", "gen \"../../webrtc_lib/Win64/Release\" --args=\"is_debug=false target_cpu=\\\"x64\\\" rtc_include_tests=false\""]},
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "ninja", "-C \"../../webrtc_lib/Win64/Release\""]},
+                ]
+            },
+            { "name"  : "build_Win32",
+              "active": activities[subdir_depot_tools[:-1]]["build_Win32"],
+              "steps" : 
+                [
+                    { "command" : command.read_env_vars,
+                      "args"    : []},
+                    { "command" : command.update_environment_variable,
+                      "args"    : ["--variable=Path", "--action=prepend", "--value="+install_dir+subdir_depot_tools]},
+                    { "command" : command.create_environment_variable,
+                      "args"    : ["--variable=DEPOT_TOOLS_WIN_TOOLCHAIN", "--value=0"]},
+                    { "command" : command.create_environment_variable,
+                      "args"    : ["--variable=GYP_MSVS_OVERRIDE_PATH", "--value="+vstudio_dir]},
+                    { "command" : command.create_environment_variable,
+                      "args"    : ["--variable=GYP_MSVS_VERSION", "--value="+vstudio_ver]},
+                    { "command" : command.cd,
+                      "args"    : ["./../webrtc-checkout/src"]},
+
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "gn.bat", "gen \"../../webrtc_lib/Win32/Debug\" --args=\"is_debug=true target_cpu=\\\"x86\\\" rtc_include_tests=false\""]},
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "ninja", "-C \"../../webrtc_lib/Win32/Debug\""]},
+
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "gn.bat", "gen \"../../webrtc_lib/Win32/Release\" --args=\"is_debug=false target_cpu=\\\"x86\\\" rtc_include_tests=false\""]},
+                    { "command" : command.cmd,
+                      "args"    : ["/c", "ninja", "-C \"../../webrtc_lib/Win32/Release\""]},
                 ]
             },
             { "name"  : "clean",
