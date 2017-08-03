@@ -3,6 +3,8 @@ import os
 import log_tools
 import shutil
 import re
+import winreg
+import sys
 
 class ProgressBar(object):
     """progress bar class"""
@@ -35,6 +37,18 @@ class ProgressBar(object):
         self.cleanup()
 
         print(bar, end="", flush=True)
+
+def check_access_rights(log):
+    REG_PATH = "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\\"
+    try:
+        registry_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, REG_PATH, 0, winreg.KEY_WRITE)
+        winreg.CloseKey(registry_key)
+        log.success("Access rigths - OK")
+    except WindowsError as exc:
+        log.error("unexpected: {0}".format(str(exc)))
+        log.info("Try to run as Administrator")
+        return False
+    return True
 
 def run(log, target, args=[], **kwargs):
     try:
@@ -428,18 +442,19 @@ def msbuild(context, args, **kwargs):
 
     return True
 
+def create_fixed_environment_variable(context, args, **kwargs):
+    kwargs["fixed"]=True
+    create_environment_variable(context, args, **kwargs)
+
 def create_environment_variable(context, args, **kwargs):
+    """ creates envirinment variable
+        if fixed is not present in kwags or fixed==False then variable is temporary i.e. created in stage's context
+        else creates a fixed environment variable i.e. in the system's registry """
+
     # strinpping logger
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
-
-    # reporting the command short description
-    log.info("... Creating environment variables ...")
-
-    # checking context exists
-    if context.get("environment") is None:
-        return False
 
     # checking and parsing parameters
     parameters = parse_args(log, args)
@@ -449,21 +464,66 @@ def create_environment_variable(context, args, **kwargs):
         result+="[create_environment_variable] invalid parameters set"+"\n"
         return False
 
-    # stripping quoted string    
-    if parameters["value"][0] == "\"" and parameters["value"][-1] == "\"":
-        parameters["value"] = parameters["value"][1:-1]
-    
-    # checking if target environment variable present in the list
-    variable_key = None
-    for key in context["environment"]:
-        if key.upper() ==  parameters["variable"].upper():
-            variable_key = key
-            break
-    
-    # set given variable's value
-    context["environment"][parameters["variable"] if variable_key is None else variable_key]=parameters["value"]
+    if kwargs.get("fixed") is None or kwargs["fixed"] is False:
+        """ creating temporary environment vasiable """
+
+        # reporting the command short description
+        log.info("... Creating temporary environment variable ...")
+
+        # checking context exists
+        if context.get("environment") is None:
+            return False
+
+        # stripping quoted string    
+        if parameters["value"][0] == "\"" and parameters["value"][-1] == "\"":
+            parameters["value"] = parameters["value"][1:-1]
+        
+        # checking if target environment variable present in the list
+        variable_key = None
+        for key in context["environment"]:
+            if key.upper() ==  parameters["variable"].upper():
+                variable_key = key
+                break
+        
+        # set given variable's value
+        context["environment"][parameters["variable"] if variable_key is None else variable_key]=parameters["value"]
+    else:
+        """ creating fixed environment vasiable """
+
+        if not parameters["value"].endswith("/") and not parameters["value"].endswith("\\"):
+            parameters["value"] += "/"
+
+        key_exists = True
+        REG_PATH = "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\\"
+
+        registry_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, REG_PATH, 0, winreg.KEY_READ)
+        try:
+            value, regtype = winreg.QueryValueEx(registry_key, parameters["variable"])
+        except WindowsError:
+            key_exists = False
+        winreg.CloseKey(registry_key)
+
+        if key_exists is False or value != parameters["value"].replace("/", "\\"):
+            # reporting the command short description
+            if key_exists is False:
+                log.info("... Creating fixed environment variable ...")
+            elif value != parameters["value"]:
+                log.info("... Changing existent fixed environment variable ...")
+            log.info("{0}={1}".format(parameters["variable"], parameters["value"].replace("/","\\")))
+
+            try:
+                registry_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, REG_PATH, 0, winreg.KEY_WRITE)
+                winreg.SetValueEx(registry_key, parameters["variable"], 0, winreg.REG_SZ, parameters["value"].replace("/","\\"))
+                winreg.CloseKey(registry_key)
+            except WindowsError as exc:
+                log.error("unexpected: {0}".format(str(exc)))
+                return False
+        else:
+            log.info("... Fixed environment variable is up to date...")
+            log.info("{0}={1}".format(parameters["variable"], parameters["value"].replace("/","\\")))
     
     return True
+
 
 def cd(context, args, **kwargs):
     if len(args) == 0:

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+#TODO make dry run
 #TODO check if all the variables below are initialized before start doing anything
 #TODO pass install target dir by argv
 #TODO check all the pathes required before start
@@ -19,24 +20,26 @@ import command
 import json
 import sys
 
-subdir_boost        = "boost/"
-subdir_openssl      = "openssl/"
-subdir_socketio     = "socket.io/"
-subdir_curl         = "curl/"
-subdir_depot_tools  = "depot_tools/"
+subdir_boost            = "boost/"
+subdir_openssl          = "openssl/"
+subdir_socketio         = "socket.io/"
+subdir_curl             = "curl/"
+subdir_json             = "json/"
+subdir_depot_tools      = "depot_tools/"
+subdir_libcliquewebrtc  = "libcliquewebrtc/"
 
 activities = \
 {
     subdir_boost[:-1]   : { 
           "clone"       : False,
-          "build_Win32" : False,
           "build_Win64" : False,
+          "build_Win32" : False,
           "clean"       : False,
     },
     subdir_openssl[:-1] : { 
           "clone"       : False,
-          "build_Win32" : False,
           "build_Win64" : False,
+          "build_Win32" : False,
           "clean"       : False,
     },
     subdir_socketio[:-1]: {
@@ -51,12 +54,23 @@ activities = \
           "build_Win32" : False,
           "clean"       : False,
     },
+    subdir_json[:-1]    : {
+          "clone"       : False,
+    },
     subdir_depot_tools[:-1]: {
           "clone"       : False,
           "setup"       : False,
-          "build_Win64" : True,
-          "build_Win32" : True,
+          "build_Win64" : False,
+          "build_Win32" : False,
           "clean"       : False,
+    },
+    "set_env_vars"         : {
+          "setup"       : True,
+    },
+    subdir_libcliquewebrtc[:-1]: {
+          "clone"       : False,
+          "build_Win64" : False,
+          "build_Win32" : False,
     },
 }
 
@@ -344,6 +358,22 @@ dependencies =\
             },
         ]
     },
+    { "name"          : subdir_json[:-1],
+      "stages"        : [
+            { "name"  : "clone",
+              "active": activities[subdir_json[:-1]]["clone"],
+              "steps" :
+                [
+                    { "command" : command.git,
+                      "args"    : [ "clone", "https://github.com/nlohmann/json.git", "./"]},
+                    { "command" : command.git,
+                      "args"    : [ "checkout", "develop" ]},
+                    { "command" : command.git,
+                      "args"    : ["submodule", "update", "--init", "--"]},
+                ]
+            },
+        ]
+    },
     { "name"          : subdir_depot_tools[:-1],
       "stages"        : [
             { "name"  : "clone",
@@ -401,14 +431,14 @@ dependencies =\
                       "args"    : ["./../webrtc-checkout/src"]},
 
                     { "command" : command.cmd,
-                      "args"    : ["/c", "gn.bat", "gen \"../../webrtc_lib/Win64/Debug\" --args=\"is_debug=true target_cpu=\\\"x64\\\" rtc_include_tests=false\""]},
+                      "args"    : ["/c", "gn.bat", "gen \"../../webrtc_libs/Win64/Debug\" --args=\"is_debug=true target_cpu=\\\"x64\\\" rtc_include_tests=false\""]},
                     { "command" : command.cmd,
-                      "args"    : ["/c", "ninja", "-C \"../../webrtc_lib/Win64/Debug\""]},
+                      "args"    : ["/c", "ninja", "-C \"../../webrtc_libs/Win64/Debug\""]},
 
                     { "command" : command.cmd,
-                      "args"    : ["/c", "gn.bat", "gen \"../../webrtc_lib/Win64/Release\" --args=\"is_debug=false target_cpu=\\\"x64\\\" rtc_include_tests=false\""]},
+                      "args"    : ["/c", "gn.bat", "gen \"../../webrtc_libs/Win64/Release\" --args=\"is_debug=false target_cpu=\\\"x64\\\" rtc_include_tests=false\""]},
                     { "command" : command.cmd,
-                      "args"    : ["/c", "ninja", "-C \"../../webrtc_lib/Win64/Release\""]},
+                      "args"    : ["/c", "ninja", "-C \"../../webrtc_libs/Win64/Release\""]},
                 ]
             },
             { "name"  : "build_Win32",
@@ -429,14 +459,14 @@ dependencies =\
                       "args"    : ["./../webrtc-checkout/src"]},
 
                     { "command" : command.cmd,
-                      "args"    : ["/c", "gn.bat", "gen \"../../webrtc_lib/Win32/Debug\" --args=\"is_debug=true target_cpu=\\\"x86\\\" rtc_include_tests=false\""]},
+                      "args"    : ["/c", "gn.bat", "gen \"../../webrtc_libs/Win32/Debug\" --args=\"is_debug=true target_cpu=\\\"x86\\\" rtc_include_tests=false\""]},
                     { "command" : command.cmd,
-                      "args"    : ["/c", "ninja", "-C \"../../webrtc_lib/Win32/Debug\""]},
+                      "args"    : ["/c", "ninja", "-C \"../../webrtc_libs/Win32/Debug\""]},
 
                     { "command" : command.cmd,
-                      "args"    : ["/c", "gn.bat", "gen \"../../webrtc_lib/Win32/Release\" --args=\"is_debug=false target_cpu=\\\"x86\\\" rtc_include_tests=false\""]},
+                      "args"    : ["/c", "gn.bat", "gen \"../../webrtc_libs/Win32/Release\" --args=\"is_debug=false target_cpu=\\\"x86\\\" rtc_include_tests=false\""]},
                     { "command" : command.cmd,
-                      "args"    : ["/c", "ninja", "-C \"../../webrtc_lib/Win32/Release\""]},
+                      "args"    : ["/c", "ninja", "-C \"../../webrtc_libs/Win32/Release\""]},
                 ]
             },
             { "name"  : "clean",
@@ -447,31 +477,31 @@ dependencies =\
             },
         ]
     },
+    { "name"          : "set_env_vars",
+      "stages"        : [
+            { "name"  : "setup",
+              "active": activities["set_env_vars"]["setup"],
+              "steps" :
+                [
+                    { "command" : command.create_fixed_environment_variable,
+                      "args"    : ["--variable=BOOST", "--value="+install_dir+subdir_boost[:-1]+"_libs"]},
+                    { "command" : command.create_fixed_environment_variable,
+                      "args"    : ["--variable=CURL", "--value="+install_dir+subdir_curl[:-1]+"_libs"]},
+                    { "command" : command.create_fixed_environment_variable,
+                      "args"    : ["--variable=JSON", "--value="+install_dir+subdir_json[:-1]+"_libs"]},
+                    { "command" : command.create_fixed_environment_variable,
+                      "args"    : ["--variable=OPENSSL", "--value="+install_dir+subdir_openssl[:-1]+"_libs"]},
+                    { "command" : command.create_fixed_environment_variable,
+                      "args"    : ["--variable=SOCKET_IO", "--value="+install_dir+subdir_socketio[:-1]+"_libs"]},
+                    { "command" : command.create_fixed_environment_variable,
+                      "args"    : ["--variable=WEBSOCKETPP", "--value="+install_dir+subdir_socketio[:-1]+"/lib/websocketpp"]}, #TODO: copy necessary files to websocket_lib(?)
+                    { "command" : command.create_fixed_environment_variable,
+                      "args"    : ["--variable=WEBRTC", "--value="+install_dir+"webrtc_libs"]},
+                ]
+            },
+        ]
+    },
 ]
-
-"""
-Сборка webrtc:
-Release_x64:
-	>gn gen out/Release_x64 --args="is_debug=false target_cpu=\"x64\""
-	>gn clean out/Release_x64
-	>gm -C out/Release_x64
-
-Debug_x64:
-	>gn gen out/Debug_x64 --args="is_debug=true target_cpu=\"x64\""
-	>gn clean out/Debug_x64
-	>gm -C out/Debug_x64
-
-Release_x86:
-	>gn gen out/Release_x86 --args="is_debug=false target_cpu=\"x86\""
-	>gn clean out/Release_x86
-	>gm -C out/Release_x86
-
-Debug_x86
-	>gn gen out/Debug_x86 --args="is_debug=true target_cpu=\"x86\""
-	>gn clean out/Debug_x86
-	>gm -C out/Debug_x86
-
-"""
 
 def main():
     log.info("Starting...")
@@ -528,6 +558,10 @@ if __name__ == "__main__":
         print("The install dir that is \"{0}\" already exist. Creating logger".format(install_dir))
 
     log = log_tools.Logger(install_dir, log_file_name)
+
+    if command.check_access_rights(log) is False:
+        exit()
+
     log.info("=== SWITCHES")
     activities_text = json.dumps(activities, sort_keys=False, indent=4).split("\n")
     for line in activities_text:
