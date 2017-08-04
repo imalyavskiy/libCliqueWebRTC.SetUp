@@ -32,9 +32,9 @@ activities = \
 {
     subdir_boost[:-1]   : { 
           "clone"       : False,
-          "build_Win64" : False,
-          "build_Win32" : False,
-          "clean"       : False,
+          "build_Win64" : True,
+          "build_Win32" : True,
+          "clean"       : True,
     },
     subdir_openssl[:-1] : { 
           "clone"       : False,
@@ -65,7 +65,7 @@ activities = \
           "clean"       : False,
     },
     "set_env_vars"         : {
-          "setup"       : True,
+          "setup"       : False,
     },
     subdir_libcliquewebrtc[:-1]: {
           "clone"       : False,
@@ -103,7 +103,7 @@ dependencies =\
                     { "command" : command.b2,
                       "args"    : [ "headers" ]},
                     { "command" : command.b2,
-                      "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", "link=static", "runtime-link=static", "threading=multi", "address-model=64"]},
+                      "args"    : ["--with-thread", "--with-system", "--with-date_time", "--with-random", "--with-regex", "link=static", "runtime-link=static", "threading=multi", "address-model=64"]},
                     { "command" : command.move,
                       "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win64\""]},
                     { "command" : command.copy,
@@ -125,7 +125,7 @@ dependencies =\
                     { "command" : command.b2,
                       "args"    : [ "headers" ]},
                     { "command" : command.b2,
-                      "args"    : ["--with-system", "--with-date_time", "--with-random", "--with-regex", "link=static", "runtime-link=static", "threading=multi", "address-model=32"]},
+                      "args"    : ["--with-thread", "--with-system", "--with-date_time", "--with-random", "--with-regex", "link=static", "runtime-link=static", "threading=multi", "address-model=32"]},
                     { "command" : command.move,
                       "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win32\"", "--filter=\"\""]},
                     { "command" : command.copy,
@@ -321,7 +321,7 @@ dependencies =\
                     { "command" : command.move,
                       "args"    : ["--src=\"./lib/Debug\"", "--dst=\"./../curl_libs/Win64/Debug\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""]},
                     { "command" : command.copy,
-                      "args"    : ["--src=\"./include/curl\"", "--dst=\"./../curl_libs/include\"" , "--filter=\"*.h;*.hpp\""]},
+                      "args"    : ["--src=\"./include/curl\"", "--dst=\"./../curl_libs/include/curl\"" , "--filter=\"*.h;*.hpp\""]},
                 ]
             },
             { "name"  : "build_Win32",
@@ -345,7 +345,7 @@ dependencies =\
                     { "command" : command.move,
                       "args"    : ["--src=\"./lib/Debug\"", "--dst=\"./../curl_libs/Win32/Debug\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""]},
                     { "command" : command.copy,
-                      "args"    : ["--src=\"./include/curl\"", "--dst=\"./../curl_libs/include\"" , "--filter=\"*.h;*.hpp\""]},
+                      "args"    : ["--src=\"./include/curl\"", "--dst=\"./../curl_libs/include/curl\"" , "--filter=\"*.h;*.hpp\""]},
                 ]
             },
             { "name"  : "clean",
@@ -484,19 +484,7 @@ dependencies =\
               "steps" :
                 [
                     { "command" : command.create_fixed_environment_variable,
-                      "args"    : ["--variable=BOOST", "--value="+install_dir+subdir_boost[:-1]+"_libs"]},
-                    { "command" : command.create_fixed_environment_variable,
-                      "args"    : ["--variable=CURL", "--value="+install_dir+subdir_curl[:-1]+"_libs"]},
-                    { "command" : command.create_fixed_environment_variable,
-                      "args"    : ["--variable=JSON", "--value="+install_dir+subdir_json[:-1]+"_libs"]},
-                    { "command" : command.create_fixed_environment_variable,
-                      "args"    : ["--variable=OPENSSL", "--value="+install_dir+subdir_openssl[:-1]+"_libs"]},
-                    { "command" : command.create_fixed_environment_variable,
-                      "args"    : ["--variable=SOCKET_IO", "--value="+install_dir+subdir_socketio[:-1]+"_libs"]},
-                    { "command" : command.create_fixed_environment_variable,
-                      "args"    : ["--variable=WEBSOCKETPP", "--value="+install_dir+subdir_socketio[:-1]+"/lib/websocketpp"]}, #TODO: copy necessary files to websocket_lib(?)
-                    { "command" : command.create_fixed_environment_variable,
-                      "args"    : ["--variable=WEBRTC", "--value="+install_dir+"webrtc_libs"]},
+                      "args"    : ["--variable=LIB_CLIQUE_DEPENDENCY_DIR", "--value="+install_dir]},
                 ]
             },
         ]

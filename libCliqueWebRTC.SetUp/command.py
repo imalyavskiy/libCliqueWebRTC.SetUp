@@ -5,6 +5,7 @@ import shutil
 import re
 import winreg
 import sys
+import time
 
 class ProgressBar(object):
     """progress bar class"""
@@ -51,67 +52,61 @@ def check_access_rights(log):
     return True
 
 def run(log, target, args=[], **kwargs):
-    try:
-        pipe = subprocess.PIPE
+    result = str()
+    pipe = subprocess.PIPE
     
-        cmd_str = target
-        for arg in args:
-            cmd_str += " " + arg
+    cmd_str = target
+    for arg in args:
+        cmd_str += " " + arg
 
-        cwd_str = os.getcwd()
-        cwd = kwargs.get("cwd")
-        if cwd is not None:
-            cwd_str = cwd
+    cwd_str = os.getcwd()
+    cwd = kwargs.get("cwd")
+    if cwd is not None:
+        cwd_str = cwd
     
-        if "env" in kwargs:
-            env = kwargs["env"]
-        else:
-            env = None
+    env = kwargs["env"] if "env" in kwargs and kwargs["env"] is not None else os.environ
 
-        log.info("Calling to \"{0}\"".format(cmd_str))
-        log.info("        at \"{0}\"".format(cwd_str))
+    log.info("Calling to \"{0}\"".format(cmd_str))
+    log.info("        at \"{0}\"".format(cwd_str))
 
-        proc = subprocess.Popen( cmd_str,
-                                 shell  = True,
-                                 stdin  = pipe,
-                                 stdout = pipe,
-                                 stderr = subprocess.STDOUT,
-                                 cwd    = cwd_str,
-                                 env    = env )
-    
+    proc = subprocess.Popen( cmd_str,
+                                shell  = True,
+                                stdin  = pipe,
+                                stdout = pipe,
+                                stderr = subprocess.STDOUT,
+                                cwd    = cwd_str,
+                                env    = env )
 
-        report = proc.stdout.read().decode('utf8', 'irnore').split("\n")
-        for line in report:
-            log.report("\t", line, hide=True)
-#        bar     = ProgressBar()
-#
-#        loop = True
-#        while loop:
-#            line = proc.stdout.readline().decode('utf8', 'irnore')
-#        
-#            if len(line) == 0: 
-#                loop = False
-#                continue
-#        
-#            log.report("\t", line, hide=True)
-#        
-#            bar.display()
-#            result += line + "\r\n"
-#        else:
-#            bar.cleanup()
-#            pass
-#
-        log.info("Done.")
-    except:
-        return False
-    return True
+    bar     = ProgressBar()
+
+    loop = True
+    while loop:
+        line = proc.stdout.readline().decode('utf8', 'irnore')
+        result += line
+
+        ret_val = proc.poll()
+        if len(line) == 0: 
+            if ret_val is None:
+                bar.display()
+                time.sleep(1.000)
+                continue
+            else:
+                loop = False
+
+        log.report("\t", line, hide=True)
+    else:
+        bar.cleanup()
+
+    log.info("Done(return code {0}).".format(ret_val))
+
+    return True, result
 
 def git(context, args, **kwargs):
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
 
-    return run(log, "git", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
+    return run(log, "git", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])[0]
 
 def b2(context, args, **kwargs):
     log = context.get("logger")
@@ -121,7 +116,7 @@ def b2(context, args, **kwargs):
     if not os.path.isfile(context["cwd"]+"/b2.exe"):
         return False, ""
 
-    return run(log, "b2", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
+    return run(log, "b2", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])[0]
 
 def bootstrap(context, args, **kwargs):
     log = context.get("logger")
@@ -131,7 +126,7 @@ def bootstrap(context, args, **kwargs):
     if not os.path.isfile(context["cwd"]+"/bootstrap.bat"):
         return False, ""
 
-    return run(log, "bootstrap.bat", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
+    return run(log, "bootstrap.bat", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])[0]
 
 def copy(context, args, **kwargs):
     kwargs["keep"]=True
@@ -147,7 +142,7 @@ def move(context, args, **kwargs):
     log.info("... Coping files ...")
 
     # checking and parsing parameters
-    parameters, result = parse_args(log, args, result)
+    parameters = parse_args(log, args)
     if parameters is None:
         return False
     
@@ -187,13 +182,13 @@ def move(context, args, **kwargs):
                 for filter in filters:
                     res = re.match(filter, dir_item)
                     if res is not None:
-                        print(" ... Moving {0} from {1} to {2} ... ".format(dir_item, source_dir, target_dir))
+                        log.report("\t"," ... {0} {1} from {2} to {3} ... ".format("Moving" if keep is False else "Coping", dir_item, source_dir, target_dir), hide=True)
                         shutil.move(source_dir+dir_item, target_dir+dir_item) if keep is False \
                             else shutil.copy(source_dir+dir_item, target_dir+dir_item)
                         break
                     pass
             else:
-                print(" ... Moving {0} from {1} to {2} ... ".format(dir_item, source_dir, target_dir))
+                log.report("\t"," ... {0} {1} from {2} to {3} ... ".format("Moving" if keep is False else "Coping", dir_item, source_dir, target_dir), hide=True)
                 shutil.move(source_dir+dir_item, target_dir+dir_item) if keep is False \
                     else shutil.copy(source_dir+dir_item, target_dir+dir_item)
                 pass
@@ -205,8 +200,7 @@ def move(context, args, **kwargs):
             newargs = []
             for param in newparameters:
                 newargs.append("--{0}={1}".format(param, "\""+newparameters[param]+"\""))
-            res_bool, res_text, move(context, newargs, **kwargs)
-            ressult += res_text
+            res_bool = move(context, newargs, **kwargs)
             pass
     
     if not keep:
@@ -245,10 +239,12 @@ def read_env_vars(context, args, **kwargs):
     cmd = '/s /c "{arguments} && echo "{tag}" && set"'.format(**vars())
 
     # launch the process
-    result = proc = run(log, "cmd.exe", [cmd], environment_variables=initial)
+    result = run(log, "cmd.exe", [cmd], environment_variables=initial)
+    if result[0] is False:
+        return False
 
     # parse the output sent to stdout
-    lines = proc.split("\r\n")
+    lines = result[1].split("\r\n")
     
     environment_variables={}
     #remove all lines prior tag inclusive
@@ -274,7 +270,7 @@ def perl(context, args, **kwargs):
     if log is None:
         log = log_tools.Logger()
     
-    return run(log, "perl", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
+    return run(log, "perl", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])[0]
 
 def cmd(context, args, **kwargs):
     log = context.get("logger")
@@ -285,7 +281,7 @@ def cmd(context, args, **kwargs):
         if args[arg].endswith(".bat") and not os.path.isabs(args[arg]):
             args[arg] = context["dependency_dir"]+args[arg]
     
-    return run(log, "cmd", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
+    return run(log, "cmd", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])[0]
 
 def parse_args(log, args):
     
@@ -418,9 +414,7 @@ def cmake(context, args, **kwargs):
         if args[arg].endswith(".bat") and not os.path.isabs(args[arg]):
             args[arg] = context["dependency_dir"]+args[arg]
     
-    result = run(log, "cmake", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
-    
-    return True
+    return run(log, "cmake", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])[0]
 
 def msbuild(context, args, **kwargs):
     log = context.get("logger")
@@ -431,7 +425,7 @@ def msbuild(context, args, **kwargs):
         if args[arg].endswith(".bat") and not os.path.isabs(args[arg]):
             args[arg] = context["dependency_dir"]+args[arg]
     
-    result = run(log, "msbuild", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])
+    result = run(log, "msbuild", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])[0]
     if result.endswith("\n"):
         result = result[:-1]
     result = result.replace("\r", "");
