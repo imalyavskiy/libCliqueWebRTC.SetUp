@@ -107,7 +107,7 @@ dependencies =\
                     { "command" : command.move,
                       "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win64\"", "--filter=\"*.lib\""]},
                     { "command" : command.copy,
-                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\"", "--filter=\"*.h;*.hpp\""]},
+                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\"", "--filter=\"*.h;*.hpp;*.ipp\""]},
                     { "command" : command.git,
                       "args"    : [ "clean", "-fx", "-d"]},
                 ]
@@ -129,7 +129,7 @@ dependencies =\
                     { "command" : command.move,
                       "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win32\"", "--filter=\"*.lib\""]},
                     { "command" : command.copy,
-                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\"", "--filter=\"*.h;*.hpp\""]},
+                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\"", "--filter=\"*.h;*.hpp;*.ipp\""]},
                     { "command" : command.git,
                       "args"    : [ "clean", "-fx", "-d"]},
                 ]
