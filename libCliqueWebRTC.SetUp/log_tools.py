@@ -37,6 +37,13 @@ class Logger(object):
         self.report("[FAILURE]", _string_text)
         pass
 
+    def fatal(self, _string_text="", **kwargs):
+        self.report("[FATAL]", _string_text)
+        pass
+
     def success(self, _string_text="", **kwargs):
         self.report("[SUCCESS]", _string_text)
         pass
+    
+    def delimeter(self):
+        self.report("", "--------------------------------------------------------------")

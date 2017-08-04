@@ -44,7 +44,8 @@ def check_access_rights(log):
     try:
         registry_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, REG_PATH, 0, winreg.KEY_WRITE)
         winreg.CloseKey(registry_key)
-        log.success("Access rigths - OK")
+        log.info("Access rigths")
+        log.success("Ok!")
     except WindowsError as exc:
         log.error("unexpected: {0}".format(str(exc)))
         log.info("Try to run as Administrator")

@@ -7,12 +7,16 @@
 #TODO write the application long and the logs of instruments(commands) to the bit log file
 
 log_file_name   = "set_up"
+
+###########################################
 install_dir     = "D:/TEMP/test_setup/"
+vstudio_dir     = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/" 
 vcvarsall_dir   = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/"
 msbuild_dir     = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.10.25017/bin/HostX64/x64/"
-vstudio_dir     = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/" 
-vstudio_ver     = "2017"
 cmake_dir       = "C:/Program Files/CMake/bin/"
+##########################################
+vstudio_ver     = "2017"
+##########################################
 
 import log_tools
 import os
@@ -399,7 +403,7 @@ dependencies =\
                     { "command" : command.create_environment_variable,
                       "args"    : ["--variable=DEPOT_TOOLS_WIN_TOOLCHAIN", "--value=0"]},
                     { "command" : command.create_environment_variable,
-                      "args"    : ["--variable=GYP_MSVS_OVERRIDE_PATH", "--value=\"C:/Program Files (x86)/Microsoft Visual Studio/2017/Community\""]}, #TODO move to the beginning os the file
+                      "args"    : ["--variable=GYP_MSVS_OVERRIDE_PATH", "--value=\""+vstudio_dir+"\""]}, #TODO move to the beginning os the file
                     { "command" : command.create_environment_variable,
                       "args"    : ["--variable=GYP_MSVS_VERSION", "--value=2017"]},
                     # oprations below take about 3 hours to finish
@@ -491,6 +495,37 @@ dependencies =\
     },
 ]
 
+def check_required_paths(log):
+    if not os.path.isdir(vstudio_dir):
+        log.fatal("The \""+vstudio_dir+"\" not exists")
+        return False
+    else:
+        log.info("Presence of \""+vstudio_dir+"\"")
+        log.success("Ok!")
+
+    if not os.path.isdir(vcvarsall_dir):
+        log.fatal("The \""+vcvarsall_dir+"\" not exists")
+        return False
+    else:
+        log.info("Presence of \""+vcvarsall_dir+"\"")
+        log.success("Ok!")
+
+    if not os.path.isdir(msbuild_dir):
+        log.fatal("The \""+msbuild_dir+"\" not exists")
+        return False
+    else:
+        log.info("Presence of \""+msbuild_dir+"\"")
+        log.success("Ok!")
+
+    if not os.path.isdir(cmake_dir):
+        log.fatal("The \""+cmake_dir+"\" not exists")
+        return False
+    else:
+        log.info("Presence of \""+cmake_dir+"\"")
+        log.success("Ok!")
+
+    return True
+
 def main():
     log.info("Starting...")
 
@@ -531,7 +566,7 @@ def main():
             context.clear() 
     return True
 
-if __name__ == "__main__":
+def create_install_dir():
     if not os.path.isdir(install_dir):
         print("The \"{0}\" does not exist...".format(install_dir))
         try:
@@ -545,19 +580,36 @@ if __name__ == "__main__":
     else:
         print("The install dir that is \"{0}\" already exist. Creating logger".format(install_dir))
 
+
+if __name__ == "__main__":
+
+    create_install_dir()
+
     log = log_tools.Logger(install_dir, log_file_name)
+    
+    log.delimeter()
+
+    if not check_required_paths(log):
+        exit()
 
     if command.check_access_rights(log) is False:
         exit()
 
+    log.delimeter()
+    
     log.info("=== SWITCHES")
     activities_text = json.dumps(activities, sort_keys=False, indent=4).split("\n")
     for line in activities_text:
         log.info(line)
+    
+    log.delimeter()
 
     if not main():
         log.error()
         exit()
 
     log.success()
+    
+    log.delimeter()
+
     exit()
