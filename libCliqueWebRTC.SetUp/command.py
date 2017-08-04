@@ -139,7 +139,8 @@ def move(context, args, **kwargs):
     if log is None:
         log = log_tools.Logger()
 
-    log.info("... Coping files ...")
+    if kwargs.get("report") is None or kwargs["report"] is True: 
+        log.info("... Coping files ...")
 
     # checking and parsing parameters
     parameters = parse_args(log, args)
@@ -162,11 +163,11 @@ def move(context, args, **kwargs):
             parameters["filter"] = parameters["filter"][1:-1]
     
     filters =[]
-    if parameters.get("filter") is not None:
+    if parameters.get("filter") is not None and len(parameters["filter"])>0:
         filters = parameters["filter"].split(";")
     
     for cFilter in range(0, len(filters)):
-        filters[cFilter] = filters[cFilter].replace("*","^[A-Za-z0-9_]*")
+        filters[cFilter] = filters[cFilter].replace("*","^[A-Za-z0-9_\-]*")
         filters[cFilter]+="$"
 
     source_dir = context["dependency_dir"]+parameters["src"]
@@ -179,14 +180,17 @@ def move(context, args, **kwargs):
     for dir_item in dir_items:
         if os.path.isfile(source_dir+dir_item):
             if len(filters) > 0:
+                item_copied = False
                 for filter in filters:
                     res = re.match(filter, dir_item)
                     if res is not None:
                         log.report("\t"," ... {0} {1} from {2} to {3} ... ".format("Moving" if keep is False else "Coping", dir_item, source_dir, target_dir), hide=True)
                         shutil.move(source_dir+dir_item, target_dir+dir_item) if keep is False \
                             else shutil.copy(source_dir+dir_item, target_dir+dir_item)
+                        item_copied = True
                         break
-                    pass
+                if item_copied is False:
+                    log.report("\t"," ... {0} {1} ... ".format("Filtering out", dir_item), hide=True)
             else:
                 log.report("\t"," ... {0} {1} from {2} to {3} ... ".format("Moving" if keep is False else "Coping", dir_item, source_dir, target_dir), hide=True)
                 shutil.move(source_dir+dir_item, target_dir+dir_item) if keep is False \
@@ -200,6 +204,7 @@ def move(context, args, **kwargs):
             newargs = []
             for param in newparameters:
                 newargs.append("--{0}={1}".format(param, "\""+newparameters[param]+"\""))
+            kwargs["report"] = False
             res_bool = move(context, newargs, **kwargs)
             pass
     

@@ -32,9 +32,9 @@ activities = \
 {
     subdir_boost[:-1]   : { 
           "clone"       : False,
-          "build_Win64" : True,
-          "build_Win32" : True,
-          "clean"       : True,
+          "build_Win64" : False,
+          "build_Win32" : False,
+          "clean"       : False,
     },
     subdir_openssl[:-1] : { 
           "clone"       : False,
@@ -105,9 +105,9 @@ dependencies =\
                     { "command" : command.b2,
                       "args"    : ["--with-thread", "--with-system", "--with-date_time", "--with-random", "--with-regex", "link=static", "runtime-link=static", "threading=multi", "address-model=64"]},
                     { "command" : command.move,
-                      "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win64\""]},
+                      "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win64\"", "--filter=\"*.lib\""]},
                     { "command" : command.copy,
-                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\""]},
+                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\"", "--filter=\"*.h;*.hpp\""]},
                     { "command" : command.git,
                       "args"    : [ "clean", "-fx", "-d"]},
                 ]
@@ -127,9 +127,9 @@ dependencies =\
                     { "command" : command.b2,
                       "args"    : ["--with-thread", "--with-system", "--with-date_time", "--with-random", "--with-regex", "link=static", "runtime-link=static", "threading=multi", "address-model=32"]},
                     { "command" : command.move,
-                      "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win32\"", "--filter=\"\""]},
+                      "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win32\"", "--filter=\"*.lib\""]},
                     { "command" : command.copy,
-                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\"", "--filter=\"\""]},
+                      "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\"", "--filter=\"*.h;*.hpp\""]},
                     { "command" : command.git,
                       "args"    : [ "clean", "-fx", "-d"]},
                 ]
@@ -321,7 +321,7 @@ dependencies =\
                     { "command" : command.move,
                       "args"    : ["--src=\"./lib/Debug\"", "--dst=\"./../curl_libs/Win64/Debug\"" , "--filter=\"*.lib;*.dll;*.ilk;*.pdb;*.exp\""]},
                     { "command" : command.copy,
-                      "args"    : ["--src=\"./include/curl\"", "--dst=\"./../curl_libs/include/curl\"" , "--filter=\"*.h;*.hpp\""]},
+                      "args"    : ["--src=\"./include/curl\"", "--dst=\"./../curl_libs/include/curl\"", "--filter=\"*.h;*.hpp\""]},
                 ]
             },
             { "name"  : "build_Win32",
