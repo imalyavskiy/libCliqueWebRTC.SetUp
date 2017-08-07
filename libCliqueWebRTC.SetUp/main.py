@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+#TODO create gn command
+#TODO create ninja command
+#TODO create fetch command (fetch.bat of depot_tools)
+#TODO create gclient command(gclient.bat of depot tools)
+#TODO get rid of cmd command - move it underground(as command.run())
 #TODO make dry run
 #TODO check if all the variables below are initialized before start doing anything
 #TODO pass install target dir by argv
@@ -9,10 +14,15 @@
 log_file_name   = "set_up"
 
 ###########################################
-install_dir     = "D:/TEMP/test_setup/"
+# used as a folder that contains all the dependencies and participates in construction of the CWD for certain dependency - "install_dir+dependency_name+/"
+install_dir     = "D:/TEMP/test_setup/"         
+# MS Visual Studio install dir
 vstudio_dir     = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/" 
-vcvarsall_dir   = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/"
-msbuild_dir     = "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.10.25017/bin/HostX64/x64/"
+# MS Visual Studio build evironment batches dir
+vcvarsall_dir   = vstudio_dir+"VC/Auxiliary/Build/"
+# MS Visual Studio build tools dir
+msbuild_dir     = vstudio_dir+"VC/Tools/MSVC/14.10.25017/bin/HostX64/x64/"
+# CMake install dir
 cmake_dir       = "C:/Program Files/CMake/bin/"
 ##########################################
 vstudio_ver     = "2017"
@@ -32,6 +42,7 @@ subdir_json             = "json/"
 subdir_depot_tools      = "depot_tools/"
 subdir_libcliquewebrtc  = "libcliquewebrtc/"
 
+# The list of active stages for certain dependencies
 activities = \
 {
     subdir_boost[:-1]   : { 
@@ -78,76 +89,121 @@ activities = \
     },
 }
 
+# The list of dependencies
+# the structure is the follows:
+#     [                                             # list of dependencies each dependency is a dictionary
+#       { "name"            : <dependency_name>     # string
+#         "stages"          : [                     # list of stages
+#           { "name"        : <stage_name>,         # string
+#             "steps"       : [                     # list of steps
+#               { "command" : <command_function>,   # string
+#                 "args"    : [                     # list of certain command arguments
+#                 <arg_0>, ..., <arg_N>             # arguments are command function dependent
+#                 ]
+#               }
+#             ]
+#           }
+#         ]
+#       } 
+#     ]
+
+# the set of rules requred to set up all the dependencies
 dependencies =\
 [
+    # boost
     { "name"          : subdir_boost[:-1],
       "stages"        : [ 
+            # cloning repository from git   
             { "name"  : "clone",
               "active": activities[subdir_boost[:-1]]["clone"],
               "steps" :
                 [
+                    # calling git to clone from url and to the working directory
                     { "command" : command.git,
-                      "args"    : [ "clone", "https://github.com/boostorg/boost", "./"]},
+                      "args"    : [ "clone", "https://github.com/boostorg/boost", "./"]},                
+                    # switching repository to the certain tag(i.e. create a local branch from given tag)
                     { "command" : command.git,
                       "args"    : [ "checkout", "-b", "branch_boost-1.64.0", "boost-1.64.0" ]},
+                    # unitializing and updating submodules if any are present(will bw executed if .submodules file present at CWD) 
                     { "command" : command.git,
                       "args"    : ["submodule", "update", "--init", "--"]},
                 ]
             },
+            # building for Win64
             { "name"  : "build_Win64",
               "active": activities[subdir_boost[:-1]]["build_Win64"],
               "steps" : 
                 [
+                    # reading environment variables that are set by the vcvarsall.bat with x64 argument provided
                     { "command" : command.read_env_vars,
                       "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x64"]},
+                    # cleaning up the boost local repository
                     { "command" : command.git,
                       "args"    : [ "clean", "-fx", "-d"]},
+                    # building b2.exe and bjam.exe - boost build system tools
                     { "command" : command.bootstrap,
                       "args"    : []},
+                    # gathering all boost header under ./boost/ dir 
                     { "command" : command.b2,
                       "args"    : [ "headers" ]},
+                    # building required boost libraries 
                     { "command" : command.b2,
                       "args"    : ["--with-thread", "--with-system", "--with-date_time", "--with-random", "--with-regex", "link=static", "runtime-link=static", "threading=multi", "address-model=64"]},
+                    # moving just built boost build libraries from ./stage/lib to ./../boost_libs/lib_Win64 filtering out all except *.lib
                     { "command" : command.move,
                       "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win64\"", "--filter=\"*.lib\""]},
+                    # coping boost header files from ./boost/ to ./../boost_libs/boost filtering out all except *.h;*.hpp;*.ipp 
                     { "command" : command.copy,
                       "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\"", "--filter=\"*.h;*.hpp;*.ipp\""]},
+                    # cleaning boost local repository
                     { "command" : command.git,
                       "args"    : [ "clean", "-fx", "-d"]},
                 ]
             },
+            # building for Win32
             { "name"  : "build_Win32",
               "active": activities[subdir_boost[:-1]]["build_Win32"],
               "steps" : 
                 [
+                    # reading environment variables
                     { "command" : command.read_env_vars,
                       "args"    : [ "\""+vcvarsall_dir+"vcvarsall.bat\"", "x86"]},
+                    # cleaning local repository
                     { "command" : command.git,
                       "args"    : [ "clean", "-fx", "-d"]},
+                    # building b2.exe and bjam.exe - boost build system tools
                     { "command" : command.bootstrap,
                       "args"    : []},
+                    # gathering all boost header under ./boost/ dir 
                     { "command" : command.b2,
                       "args"    : [ "headers" ]},
+                    # building required boost libraries 
                     { "command" : command.b2,
                       "args"    : ["--with-thread", "--with-system", "--with-date_time", "--with-random", "--with-regex", "link=static", "runtime-link=static", "threading=multi", "address-model=32"]},
+                    # moving just built boost build libraries from ./stage/lib to ./../boost_libs/lib_Win64 filtering out all except *.lib
                     { "command" : command.move,
                       "args"    : ["--src=\"stage/lib\"", "--dst=\"./../boost_libs/lib_Win32\"", "--filter=\"*.lib\""]},
+                    # coping boost header files from ./boost/ to ./../boost_libs/boost filtering out all except *.h;*.hpp;*.ipp 
                     { "command" : command.copy,
                       "args"    : ["--src=\"boost\"", "--dst=\"./../boost_libs/boost\"", "--filter=\"*.h;*.hpp;*.ipp\""]},
+                    # cleaning boost local repository
                     { "command" : command.git,
                       "args"    : [ "clean", "-fx", "-d"]},
                 ]
             },
+            # cleaning repository
             { "name"  : "clean",
               "active": activities[subdir_boost[:-1]]["clean"],
               "steps" :
                 [
+                    # cleaning repository
                     { "command" : command.git,
                       "args"    : [ "clean", "-fx", "-d"]}
                 ]
             },
         ]
     },
+    # openssl
     { "name"          : subdir_openssl[:-1],
       "stages"        : [
             { "name"  : "clone",
@@ -214,6 +270,7 @@ dependencies =\
             },
         ]
     },
+    #socket.io
     { "name"          : subdir_socketio[:-1],
       "stages"        : [
             { "name"  : "clone",
@@ -290,6 +347,7 @@ dependencies =\
             },
         ]
     },
+    # curl
     { "name"          : subdir_curl[:-1],
       "stages"        : [
             { "name"  : "clone",
@@ -362,6 +420,7 @@ dependencies =\
             },
         ]
     },
+    # json
     { "name"          : subdir_json[:-1],
       "stages"        : [
             { "name"  : "clone",
@@ -378,6 +437,7 @@ dependencies =\
             },
         ]
     },
+    # depot tools and webrtc
     { "name"          : subdir_depot_tools[:-1],
       "stages"        : [
             { "name"  : "clone",
@@ -403,7 +463,7 @@ dependencies =\
                     { "command" : command.create_environment_variable,
                       "args"    : ["--variable=DEPOT_TOOLS_WIN_TOOLCHAIN", "--value=0"]},
                     { "command" : command.create_environment_variable,
-                      "args"    : ["--variable=GYP_MSVS_OVERRIDE_PATH", "--value=\""+vstudio_dir+"\""]}, #TODO move to the beginning os the file
+                      "args"    : ["--variable=GYP_MSVS_OVERRIDE_PATH", "--value=\""+vstudio_dir+"\""]},
                     { "command" : command.create_environment_variable,
                       "args"    : ["--variable=GYP_MSVS_VERSION", "--value=2017"]},
                     # oprations below take about 3 hours to finish
@@ -411,9 +471,9 @@ dependencies =\
                       "args"    : ["/c", "mkdir", "\"./../webrtc-checkout\""]},
                     { "command" : command.cd,
                       "args"    : ["./../webrtc-checkout"]},
-                    { "command" : command.cmd,
-                      "args"    : ["/c", "fetch.bat", "--nohooks", "webrtc"]},   #fetch that is fetch.bat and located at depot_tools/
-                    { "command" : command.cmd,
+                    { "command" : command.cmd,  # TODO - create fetch command
+                      "args"    : ["/c", "fetch.bat", "--nohooks", "webrtc"]},   #fetch is fetch.bat and located at depot_tools/
+                    { "command" : command.cmd,  # TODO - create gclient command
                       "args"    : ["/c", "gclient", "sync"]},                    #gclient that is gclient.bat and located at depot_tools/
                 ]
             },
@@ -434,14 +494,14 @@ dependencies =\
                     { "command" : command.cd,
                       "args"    : ["./../webrtc-checkout/src"]},
 
-                    { "command" : command.cmd,
+                    { "command" : command.cmd,  # TODO - create gn command
                       "args"    : ["/c", "gn.bat", "gen \"../../webrtc_libs/Win64/Debug\" --args=\"is_debug=true target_cpu=\\\"x64\\\" rtc_include_tests=false\""]},
-                    { "command" : command.cmd,
+                    { "command" : command.cmd,  # TODO - create ninja command
                       "args"    : ["/c", "ninja", "-C \"../../webrtc_libs/Win64/Debug\""]},
 
-                    { "command" : command.cmd,
+                    { "command" : command.cmd,  # TODO - create gn command
                       "args"    : ["/c", "gn.bat", "gen \"../../webrtc_libs/Win64/Release\" --args=\"is_debug=false target_cpu=\\\"x64\\\" rtc_include_tests=false\""]},
-                    { "command" : command.cmd,
+                    { "command" : command.cmd,  # TODO - create ninja command
                       "args"    : ["/c", "ninja", "-C \"../../webrtc_libs/Win64/Release\""]},
                 ]
             },
@@ -462,14 +522,14 @@ dependencies =\
                     { "command" : command.cd,
                       "args"    : ["./../webrtc-checkout/src"]},
 
-                    { "command" : command.cmd,
+                    { "command" : command.cmd,  # TODO - create gn command
                       "args"    : ["/c", "gn.bat", "gen \"../../webrtc_libs/Win32/Debug\" --args=\"is_debug=true target_cpu=\\\"x86\\\" rtc_include_tests=false\""]},
-                    { "command" : command.cmd,
+                    { "command" : command.cmd,  # TODO - create ninja command
                       "args"    : ["/c", "ninja", "-C \"../../webrtc_libs/Win32/Debug\""]},
 
-                    { "command" : command.cmd,
+                    { "command" : command.cmd,  # TODO - create gn command
                       "args"    : ["/c", "gn.bat", "gen \"../../webrtc_libs/Win32/Release\" --args=\"is_debug=false target_cpu=\\\"x86\\\" rtc_include_tests=false\""]},
-                    { "command" : command.cmd,
+                    { "command" : command.cmd,  # TODO - create ninja command
                       "args"    : ["/c", "ninja", "-C \"../../webrtc_libs/Win32/Release\""]},
                 ]
             },
@@ -481,6 +541,7 @@ dependencies =\
             },
         ]
     },
+    # fixed environment variables
     { "name"          : "set_env_vars",
       "stages"        : [
             { "name"  : "setup",
@@ -496,6 +557,7 @@ dependencies =\
 ]
 
 def check_required_paths(log):
+    ''' Checks does requred paths are present in the file system '''
     if not os.path.isdir(vstudio_dir):
         log.fatal("The \""+vstudio_dir+"\" not exists")
         return False
@@ -527,46 +589,58 @@ def check_required_paths(log):
     return True
 
 def main():
+    ''' This function runs through depenedencies/stages/steps and executes them '''
     log.info("Starting...")
 
+    # Running through dependencies
     for cDep in range(0,len(dependencies)):
         if sorted(dependencies[cDep].keys()) != sorted(["name", "stages"]):
             log.error("Invalid dependency format")
             return False
         log.info("=== Processing dependency - \"{0}\"...".format(dependencies[cDep]["name"]))
+        
+        # Checking if the dependency directory exists and creating it if it does not 
+        if not os.path.isdir(install_dir+"/"+dependencies[cDep]["name"]):
+            os.makedirs(install_dir+"/"+dependencies[cDep]["name"])
+
+        # Running through stages
         for cStage in range(0, len(dependencies[cDep]["stages"])):
             
-            # the context
+            # Setting up the context. It is used to pass common information(e.g. environment variables) between steps.
             context = {"logger"         : log,
                        "install_dir"    : install_dir,
                        "dependency_dir" : install_dir+dependencies[cDep]["name"]+"/",
                        "cwd"            : "{0}/{1}".format(install_dir, dependencies[cDep]["name"])} 
-
+            # Checking the validity of stage dict 
             if sorted(dependencies[cDep]["stages"][cStage].keys()) != sorted(["name", "active", "steps"]):
                 log.error("Invalid stage format")
                 return False
+
+            # Logging out what stage we are processing
             log.info(">>> Processing stage - \"{0}\"...".format(dependencies[cDep]["stages"][cStage]["name"]))
             if dependencies[cDep]["stages"][cStage]["active"] is False:
                 log.info("stage is inactive")
                 continue
+
+            # Running through steps
             for cStep in range(0, len(dependencies[cDep]["stages"][cStage]["steps"])):
                 log.info("step[{0}/{1}]".format(cStep + 1, len(dependencies[cDep]["stages"][cStage]["steps"])))
+                # Checking the validity of stage dict
                 if sorted(dependencies[cDep]["stages"][cStage]["steps"][cStep].keys()) != sorted(["command", "args"]):
                     log.error("Invalid command format")
                     return False
                 
-                if not os.path.isdir(install_dir+"/"+dependencies[cDep]["name"]):
-                    os.makedirs(install_dir+"/"+dependencies[cDep]["name"])
-                
+                # Executing step by calling to its command with given arguments
                 result = dependencies[cDep]["stages"][cStage]["steps"][cStep]["command"](
                     context,                                                        # context
                     dependencies[cDep]["stages"][cStage]["steps"][cStep]["args"])   # arguments
 
-            #clean up context
+            #cleaning up the context
             context.clear() 
     return True
 
 def create_install_dir():
+    ''' Creates the install dir '''
     if not os.path.isdir(install_dir):
         print("The \"{0}\" does not exist...".format(install_dir))
         try:
@@ -582,34 +656,46 @@ def create_install_dir():
 
 
 if __name__ == "__main__":
-
+    
+    #praparations
     create_install_dir()
 
+    # creating logger
     log = log_tools.Logger(install_dir, log_file_name)
     
+    # printing log delimeeter
     log.delimeter()
 
     if not check_required_paths(log):
+        # not all paths exist
         exit()
 
     if command.check_access_rights(log) is False:
+        # unsufficient access rights
         exit()
 
+    # printing log delimeeter
     log.delimeter()
-    
+
+    # logging switches 
     log.info("=== SWITCHES")
     activities_text = json.dumps(activities, sort_keys=False, indent=4).split("\n")
     for line in activities_text:
         log.info(line)
     
+    # printing log delimeeter
     log.delimeter()
 
+    # execution
     if not main():
         log.error()
+        # something went wrong
         exit()
-
+    
     log.success()
     
+    # printing log delimeeter
     log.delimeter()
 
+    #done
     exit()

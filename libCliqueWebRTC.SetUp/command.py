@@ -103,6 +103,9 @@ def run(log, target, args=[], **kwargs):
     return True, result
 
 def git(context, args, **kwargs):
+    '''
+    calls to git.exe
+    '''
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -110,6 +113,9 @@ def git(context, args, **kwargs):
     return run(log, "git", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])[0]
 
 def b2(context, args, **kwargs):
+    '''
+    calls to b2.exe
+    '''
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -120,6 +126,9 @@ def b2(context, args, **kwargs):
     return run(log, "b2", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])[0]
 
 def bootstrap(context, args, **kwargs):
+    '''
+    calls to bootstrap.bat
+    '''
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -130,10 +139,19 @@ def bootstrap(context, args, **kwargs):
     return run(log, "bootstrap.bat", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])[0]
 
 def copy(context, args, **kwargs):
+    '''
+    copies all files that satisfy the given filter from src to dst
+    cals to move() with keep==True
+    '''    
     kwargs["keep"]=True
     return move(context, args, **kwargs)
 
 def move(context, args, **kwargs):
+    '''
+    moves all files that satisfy the given filter
+    from src to dst
+    if keep==True that files are kept in the src i.e. copy operation performed instead move
+    '''
     result = str()
     keep = kwargs["keep"] if kwargs.get("keep") is not None else False
     log = context.get("logger")
@@ -215,6 +233,11 @@ def move(context, args, **kwargs):
     return True
 
 def read_env_vars(context, args, **kwargs):
+    '''
+    runs the provided batch script 
+    reads all the environment variables 
+    stores them in the stage's context
+    '''
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -272,6 +295,9 @@ def read_env_vars(context, args, **kwargs):
     return True
 
 def perl(context, args, **kwargs):
+    '''
+    calls to perl.exe
+    '''
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -279,6 +305,9 @@ def perl(context, args, **kwargs):
     return run(log, "perl", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])[0]
 
 def cmd(context, args, **kwargs):
+    '''
+    calls to cmd.exe
+    '''
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -313,6 +342,11 @@ def parse_args(log, args):
     return parameters
 
 def update_environment_variable(context, args, **kwargs):
+    '''
+    looks stage's context for a viariable given with --variable=<variable>
+    takes the value given with the --value=<value>
+    executes the action given by --action=<action> with the value
+    '''
     # strinpping logger
     log = context.get("logger")
     if log is None:
@@ -368,6 +402,14 @@ def update_environment_variable(context, args, **kwargs):
     return True
 
 def edit_file(context, args, **kwargs):
+    '''
+    opens given file in --file=<file> for read
+    looks for the string given with --string=<text>
+    performs action gived with --action=<action>
+    writes chages to temporary file
+    replaces source file with teporary one
+    '''
+
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -412,6 +454,9 @@ def edit_file(context, args, **kwargs):
     return True
 
 def cmake(context, args, **kwargs):
+    '''
+    calls to cmake.exe
+    '''
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -423,6 +468,9 @@ def cmake(context, args, **kwargs):
     return run(log, "cmake", args, env = None if context.get("environment") is None else context["environment"], cwd=context["cwd"])[0]
 
 def msbuild(context, args, **kwargs):
+    '''
+    calls to msbuild.exe
+    '''
     log = context.get("logger")
     if log is None:
         log = log_tools.Logger()
@@ -443,13 +491,22 @@ def msbuild(context, args, **kwargs):
     return True
 
 def create_fixed_environment_variable(context, args, **kwargs):
+    '''
+    creates fixed environment variable given by --variable=<variable> in the stage's context
+    sets the value given by the --value=<value>
+    in the system's registry not in stage's context
+    -- calls to a create_environment_variable with fixed==True --
+    '''
+
     kwargs["fixed"]=True
     create_environment_variable(context, args, **kwargs)
 
 def create_environment_variable(context, args, **kwargs):
-    """ creates envirinment variable
-        if fixed is not present in kwags or fixed==False then variable is temporary i.e. created in stage's context
-        else creates a fixed environment variable i.e. in the system's registry """
+    '''
+    creates environment variable given by --variable=<variable> in the stage's context
+    sets the value given by the --value=<value>
+    if fixed==True then creates a fixed environment variable i.e. in the system's registry not in stage's context
+    '''
 
     # strinpping logger
     log = context.get("logger")
@@ -526,6 +583,9 @@ def create_environment_variable(context, args, **kwargs):
 
 
 def cd(context, args, **kwargs):
+    '''
+    Changes the current working directory entry in the stage's context
+    '''
     if len(args) == 0:
         log.error("Cannot change directory")
         return False
