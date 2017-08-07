@@ -670,10 +670,6 @@ if __name__ == "__main__":
         # not all paths exist
         exit()
 
-    if command.check_access_rights(log) is False:
-        # unsufficient access rights
-        exit()
-
     # printing log delimeeter
     log.delimeter()
 
